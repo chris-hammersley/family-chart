@@ -14,12 +14,12 @@
   "author": {
     "name": "Chris Hammersley"
   },
-  "main": "dist/family-chart.js",
+  "main": "dist/@chris-hammersley/family-chart-mongodb.cjs",
   "unpkg": "dist/family-chart.min.js",
   "module": "dist/family-chart.esm.js",
   "exports": {
     ".": {
-      "require": "./dist/family-chart.js",
+      "require": "./dist/@chris-hammersley/family-chart-mongodb.cjs",
       "import": "./dist/family-chart.esm.js"
     },
     "./styles/*": "./dist/styles/*"
