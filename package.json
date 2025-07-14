@@ -19,8 +19,8 @@
   "module": "dist/family-chart.esm.js",
   "exports": {
     ".": {
-      "import": "./dist/family-chart.esm.js",
-      "require": "./dist/family-chart.js"
+      "require": "./dist/family-chart.js",
+      "import": "./dist/family-chart.esm.js"
     },
     "./styles/*": "./dist/styles/*"
   },
@@ -36,15 +36,19 @@
   ],
   "scripts": {
     "build": "node build.js",
+    "build:cjs": "rollup -c rollup.config.cjs.js",
+    "build:all": "npm run build && npm run build:cjs",
     "test": "yarn run cypress open --project tests",
     "dev": "vite",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build:all"
   },
   "sideEffects": false,
   "dependencies": {
     "d3": "6"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
     "cypress": "^9.1.0",
     "http-server": "^14.1.1",
     "rollup": "2",
