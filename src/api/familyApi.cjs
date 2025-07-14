@@ -1,8 +1,8 @@
 /**
- * API integration for MongoDB backend
+ * API integration for MongoDB backend (CommonJS)
  * @class FamilyApi
  */
-export class FamilyApi {
+class FamilyApi {
   /**
    * Create a new FamilyApi instance
    * @param {Object} config - Configuration object
@@ -224,4 +224,4 @@ export class FamilyApi {
   }
 }
 
-export default FamilyApi;
+module.exports = FamilyApi;
