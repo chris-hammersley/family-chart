@@ -15,15 +15,12 @@
     "name": "Chris Hammersley"
   },
   "main": "dist/@chris-hammersley/family-chart-mongodb.cjs",
+  "exports": {
+    ".": "./dist/@chris-hammersley/family-chart-mongodb.cjs",
+    "./dist/styles/family-chart.css": "./dist/styles/family-chart.css"
+  },
   "unpkg": "dist/family-chart.min.js",
   "module": "dist/family-chart.esm.js",
-  "exports": {
-    ".": {
-      "require": "./dist/@chris-hammersley/family-chart-mongodb.cjs",
-      "import": "./dist/family-chart.esm.js"
-    },
-    "./styles/*": "./dist/styles/*"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chris-hammersley/family-chart.git"
