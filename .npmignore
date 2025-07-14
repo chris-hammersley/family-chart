@@ -3,10 +3,16 @@ src/
 examples/
 tests/
 
+# .npmignore
+  # Do NOT ignore dist/
+  !dist/
+  !dist/*.cjs
+  !dist/*.css
+
 # Development files
 vite.config.js
-rollup.config.js
-build.js
+rollup.config.mjs
+build.cjs
 .gitignore
 .vscode/
 .idea/
