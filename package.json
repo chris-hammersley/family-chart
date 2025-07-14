@@ -1,5 +1,5 @@
 {
-  "name": "@chris-hammersley/family-chart-mongodb", 
+  "name": "@chris-hammersley/family-chart-mongodb",
   "version": "1.0.0",
   "description": "Family tree visualization with MongoDB integration",
   "keywords": [
@@ -35,8 +35,8 @@
     "LICENSE.txt"
   ],
   "scripts": {
-    "build": "node build.js",
-    "build:cjs": "rollup -c rollup.config.cjs.js",
+    "build": "node build.cjs",
+    "build:cjs": "rollup -c rollup.config.mjs",
     "build:all": "npm run build && npm run build:cjs",
     "test": "yarn run cypress open --project tests",
     "dev": "vite",
@@ -51,7 +51,7 @@
     "@rollup/plugin-node-resolve": "^15.0.0",
     "cypress": "^9.1.0",
     "http-server": "^14.1.1",
-    "rollup": "2",
+    "rollup": "^4.45.0",
     "rollup-plugin-terser": "7",
     "vite": "^6.3.5"
   }
