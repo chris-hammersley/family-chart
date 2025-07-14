@@ -62,7 +62,103 @@ const editTree = chart.editTree()
 chart.updateTree({ initial: true });
 ```
 
-### React.js Example
+# Family Chart with MongoDB Integration
+
+A powerful D3.js-based family tree visualization library with MongoDB backend support. Supports both ES6 modules and CommonJS.
+
+## Installation
+
+```bash
+npm install @yourusername/family-chart-mongodb
+# or
+yarn add @yourusername/family-chart-mongodb
+```
+
+## Quick Start
+
+### ES6 Modules (Modern)
+```javascript
+import f3 from '@yourusername/family-chart-mongodb';
+import '@yourusername/family-chart-mongodb/dist/styles/family-chart.css';
+
+// Create chart with local data
+const chart = f3.createChart('#family-tree-container', data);
+const card = chart.setCard(f3.CardHtml);
+chart.updateTree({ initial: true });
+```
+
+### CommonJS (Node.js/older environments)
+```javascript
+const f3 = require('@yourusername/family-chart-mongodb');
+require('@yourusername/family-chart-mongodb/dist/styles/family-chart.css');
+
+// Create chart with local data
+const chart = f3.createChart('#family-tree-container', data);
+const card = chart.setCard(f3.CardHtml);
+chart.updateTree({ initial: true });
+```
+
+### MongoDB Integration (ES6)
+```javascript
+import f3 from '@yourusername/family-chart-mongodb';
+
+// Create chart with API configuration
+const chart = f3.createChart('#family-tree-container', [], {
+  apiConfig: {
+    baseUrl: '/api',
+    familyId: 'your-family-id',
+    headers: {
+      'Authorization': 'Bearer your-token'
+    }
+  },
+  autoSave: true // Automatically save changes to API
+});
+
+// Load family data from MongoDB
+await chart.loadFromApi();
+
+// Set up the card component
+const card = chart.setCard(f3.CardHtml)
+  .setStyle('imageRect')
+  .setCardDisplay([
+    d => `${d['first name']} ${d['last name']}`,
+    d => d.birthday
+  ]);
+
+chart.updateTree({ initial: true });
+```
+
+### MongoDB Integration (CommonJS)
+```javascript
+const f3 = require('@yourusername/family-chart-mongodb');
+
+// Create chart with API configuration
+const chart = f3.createChart('#family-tree-container', [], {
+  apiConfig: {
+    baseUrl: '/api',
+    familyId: 'your-family-id',
+    headers: {
+      'Authorization': 'Bearer your-token'
+    }
+  },
+  autoSave: true
+});
+
+// Load family data from MongoDB
+chart.loadFromApi().then(() => {
+  // Set up the card component
+  const card = chart.setCard(f3.CardHtml)
+    .setStyle('imageRect')
+    .setCardDisplay([
+      d => `${d['first name']} ${d['last name']}`,
+      d => d.birthday
+    ]);
+
+  chart.updateTree({ initial: true });
+});
+```
+
+### React.js Example (ES6)
 ```javascript
 import React, { useEffect, useRef } from 'react';
 import f3 from '@yourusername/family-chart-mongodb';
@@ -114,6 +210,110 @@ function FamilyTree({ familyId }) {
 }
 
 export default FamilyTree;
+```
+
+### Node.js Backend Example (CommonJS)
+```javascript
+const f3 = require('@yourusername/family-chart-mongodb');
+
+// Server-side family tree processing
+async function processFamilyData(familyId) {
+  const familyApi = new f3.FamilyApi({
+    baseUrl: 'https://your-api.com/api',
+    familyId: familyId,
+    headers: {
+      'Authorization': `Bearer ${process.env.API_TOKEN}`
+    }
+  });
+
+  try {
+    // Load family data
+    const familyData = await familyApi.fetchFamily();
+    
+    // Process with family-chart utilities
+    const mainPerson = f3.utils.findPersonById(familyData, 'main-person-id');
+    const children = f3.utils.getChildren(familyData, mainPerson.id);
+    
+    // Calculate tree dimensions
+    const treeData = f3.CalculateTree({
+      data: familyData,
+      main_id: mainPerson.id,
+      node_separation: 250,
+      level_separation: 150
+    });
+    
+    return {
+      familyData,
+      mainPerson,
+      children,
+      dimensions: treeData.dim
+    };
+  } catch (error) {
+    console.error('Error processing family data:', error);
+    throw error;
+  }
+}
+
+module.exports = { processFamilyData };
+```
+
+### Express.js API Example (CommonJS)
+```javascript
+const express = require('express');
+const f3 = require('@yourusername/family-chart-mongodb');
+const mongoose = require('mongoose');
+
+const app = express();
+app.use(express.json());
+
+// Family schema
+const FamilySchema = new mongoose.Schema({
+  familyId: String,
+  members: [f3.utils.PersonSchema] // If you export a schema
+});
+
+const Family = mongoose.model('Family', FamilySchema);
+
+// Get family tree
+app.get('/api/family/:familyId', async (req, res) => {
+  try {
+    const family = await Family.findOne({ familyId: req.params.familyId });
+    if (!family) {
+      return res.status(404).json({ error: 'Family not found' });
+    }
+    
+    // Transform to family-chart format if needed
+    const familyApi = new f3.FamilyApi();
+    const transformedData = familyApi.transformFromApi(family.members);
+    
+    res.json(transformedData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Save family tree
+app.put('/api/family/:familyId', async (req, res) => {
+  try {
+    const familyApi = new f3.FamilyApi();
+    const cleanedData = familyApi.transformToApi(req.body);
+    
+    await Family.findOneAndUpdate(
+      { familyId: req.params.familyId },
+      { members: cleanedData },
+      { upsert: true }
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(3001, () => {
+  console.log('Family API server running on port 3001');
+});
+```
 ```
 
 ### Next.js Example
