@@ -1,5 +1,5 @@
 {
-  "name": "@yourusername/family-chart-mongodb", 
+  "name": "@chris-hammersley/family-chart-mongodb", 
   "version": "1.0.0",
   "description": "Family tree visualization with MongoDB integration",
   "keywords": [
@@ -9,10 +9,10 @@
     "mongodb",
     "mongoose"
   ],
-  "homepage": "https://github.com/yourusername/family-chart",
+  "homepage": "https://github.com/chris-hammersley/family-chart",
   "license": "MIT",
   "author": {
-    "name": "Your Name"
+    "name": "Chris Hammersley"
   },
   "main": "dist/family-chart.js",
   "unpkg": "dist/family-chart.min.js",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/family-chart.git"
+    "url": "git+https://github.com/chris-hammersley/family-chart.git"
   },
   "files": [
     "dist/**/*.js",
