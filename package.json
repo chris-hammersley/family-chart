@@ -29,9 +29,10 @@
     "url": "git+https://github.com/chris-hammersley/family-chart.git"
   },
   "files": [
-    "dist/**/*.js",
+    "dist/**/*.cjs",
     "dist/styles/**",
     "README.md",
+    "README_1.md",
     "LICENSE.txt"
   ],
   "scripts": {
