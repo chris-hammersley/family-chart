@@ -4,7 +4,13 @@ import resolve from "@rollup/plugin-node-resolve";
 import meta from "./package.json" with { type: "json" };
 
 const config = {
-  input: "src/index.js",
+  input: [
+    "src/index.js", 
+    'src/TreeEditor/TreeEditor.js', 
+    'src/PersonDropdown/PersonDropdown.js', 
+    'src/Forms/FormBuilder.js',  
+    'src/Utils/KinshipCalculator.js'
+  ],
   external: Object.keys(meta.dependencies || {}),
   plugins: [
     resolve({
