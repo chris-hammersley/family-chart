@@ -8,19 +8,21 @@ export default [
   // CommonJS build
   {
     input: 'src/index.js',
-    external: ['d3'], // Don't bundle d3, expect it as external dependency
+    external: ['d3'],
     output: {
-      file: 'dist/@chris-hammersley/family-chart-mongodb.cjs',
+      file: 'dist/family-chart-mongodb.cjs', // Fixed path
       format: 'cjs',
       exports: 'default'
     },
     plugins: [
-      resolve({
-        preferBuiltins: false
-      }),
+      resolve({ preferBuiltins: false }),
       commonjs(),
       production && terser()
-    ]
+    ],
+    onwarn(warning, warn) {
+      if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+      warn(warning);
+    }
   },
   
   // ES Module build
@@ -28,16 +30,18 @@ export default [
     input: 'src/index.js',
     external: ['d3'],
     output: {
-      file: 'dist/@chris-hammersley/family-chart-mongodb.esm.js', 
+      file: 'dist/family-chart-mongodb.esm.js', // Fixed path
       format: 'es'
     },
     plugins: [
-      resolve({
-        preferBuiltins: false
-      }),
+      resolve({ preferBuiltins: false }),
       commonjs(),
       production && terser()
-    ]
+    ],
+    onwarn(warning, warn) {
+      if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+      warn(warning);
+    }
   },
 
   // UMD build (for browsers)
@@ -45,7 +49,7 @@ export default [
     input: 'src/index.js',
     external: ['d3'],
     output: {
-      file: 'dist/@chris-hammersley/family-chart-mongodb.umd.js',
+      file: 'dist/family-chart-mongodb.umd.js',
       format: 'umd',
       name: 'FamilyChart',
       globals: {

@@ -14,24 +14,22 @@
   "author": {
     "name": "Chris Hammersley"
   },
-  "main": "dist/@chris-hammersley/family-chart-mongodb.cjs",
-  "module": "dist/@chris-hammersley/family-chart-mongodb.esm.js",
-  "unpkg": "dist/@chris-hammersley/family-chart-mongodb.umd.js",
+  "main": "dist/family-chart-mongodb.cjs",
+  "module": "dist/family-chart-mongodb.esm.js",
+  "unpkg": "dist/family-chart-mongodb.umd.js",
   "exports": {
     ".": {
-      "import": "./dist/@chris-hammersley/family-chart-mongodb.esm.js",
-      "require": "./dist/@chris-hammersley/family-chart-mongodb.cjs"
+      "import": "./dist/family-chart-mongodb.esm.js",
+      "require": "./dist/family-chart-mongodb.cjs"
     },
-    "./dist/styles/family-chart.css": "./dist/styles/family-chart.css",
-    "./dist/styles/family-chart-enhanced.css": "./dist/styles/family-chart-enhanced.css"
+    "./dist/styles/family-chart.css": "./dist/styles/family-chart.css"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chris-hammersley/family-chart.git"
   },
   "files": [
-    "dist/**/*.cjs",
-    "dist/styles/**",
+    "dist/**/*",
     "README.md",
     "README_1.md",
     "LICENSE.txt"
