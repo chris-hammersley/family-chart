@@ -362,11 +362,7 @@ class PersonDropdown {
    * Escape regex special characters
    */
   escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\    // Result click events
-    this.resultsList.addEventListener('click', (e) => {
-      const resultItem = e.target.closest('.f3-dropdown-item');
-      if (resultItem) {
-        const');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**

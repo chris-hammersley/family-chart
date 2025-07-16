@@ -15,12 +15,16 @@
     "name": "Chris Hammersley"
   },
   "main": "dist/@chris-hammersley/family-chart-mongodb.cjs",
+  "module": "dist/@chris-hammersley/family-chart-mongodb.esm.js",
+  "unpkg": "dist/@chris-hammersley/family-chart-mongodb.umd.js",
   "exports": {
-    ".": "./dist/@chris-hammersley/family-chart-mongodb.cjs",
-    "./dist/styles/family-chart.css": "./dist/styles/family-chart.css"
+    ".": {
+      "import": "./dist/@chris-hammersley/family-chart-mongodb.esm.js",
+      "require": "./dist/@chris-hammersley/family-chart-mongodb.cjs"
+    },
+    "./dist/styles/family-chart.css": "./dist/styles/family-chart.css",
+    "./dist/styles/family-chart-enhanced.css": "./dist/styles/family-chart-enhanced.css"
   },
-  "unpkg": "dist/family-chart.min.js",
-  "module": "dist/family-chart.esm.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chris-hammersley/family-chart.git"
@@ -33,12 +37,9 @@
     "LICENSE.txt"
   ],
   "scripts": {
-    "build": "node build.cjs",
-    "build:cjs": "rollup -c rollup.config.mjs",
-    "build:all": "npm run build && npm run build:cjs",
-    "test": "yarn run cypress open --project tests",
-    "dev": "vite",
-    "prepublishOnly": "npm run build:all"
+    "build": "rollup -c",
+    "build:watch": "rollup -c -w",
+    "build:prod": "NODE_ENV=production rollup -c"
   },
   "sideEffects": false,
   "dependencies": {

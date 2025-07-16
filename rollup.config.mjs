@@ -1,36 +1,64 @@
-import { terser } from "rollup-plugin-terser";
-import commonjs from "@rollup/plugin-commonjs";
-import resolve from "@rollup/plugin-node-resolve";
-import meta from "./package.json" with { type: "json" };
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import { terser } from 'rollup-plugin-terser';
 
-const config = {
-  input: [
-    "src/index.js", 
-    'src/TreeEditor/TreeEditor.js', 
-    'src/PersonDropdown/PersonDropdown.js', 
-    'src/Forms/FormBuilder.js',  
-    'src/Utils/KinshipCalculator.js'
-  ],
-  external: Object.keys(meta.dependencies || {}),
-  plugins: [
-    resolve({
-      preferBuiltins: false,
-      browser: true,
-    }),
-    commonjs(),
-    terser(),
-  ],
-  output: [
-    // CommonJS build
-    {
-      file: `dist/${meta.name}.cjs`,
-      format: "cjs",
-      exports: "default",
-      indent: false,
-      banner: `// ${meta.homepage} v${meta.version} Copyright ${(new Date()).getFullYear()} ${meta.author.name}`,
-      globals: Object.assign({}, ...Object.keys(meta.dependencies || {}).map((key) => ({ [key]: key }))),
+const production = !process.env.ROLLUP_WATCH;
+
+export default [
+  // CommonJS build
+  {
+    input: 'src/index.js',
+    external: ['d3'], // Don't bundle d3, expect it as external dependency
+    output: {
+      file: 'dist/@chris-hammersley/family-chart-mongodb.cjs',
+      format: 'cjs',
+      exports: 'default'
     },
-  ],
-};
+    plugins: [
+      resolve({
+        preferBuiltins: false
+      }),
+      commonjs(),
+      production && terser()
+    ]
+  },
+  
+  // ES Module build
+  {
+    input: 'src/index.js',
+    external: ['d3'],
+    output: {
+      file: 'dist/@chris-hammersley/family-chart-mongodb.esm.js', 
+      format: 'es'
+    },
+    plugins: [
+      resolve({
+        preferBuiltins: false
+      }),
+      commonjs(),
+      production && terser()
+    ]
+  },
 
-export default config;
+  // UMD build (for browsers)
+  {
+    input: 'src/index.js',
+    external: ['d3'],
+    output: {
+      file: 'dist/@chris-hammersley/family-chart-mongodb.umd.js',
+      format: 'umd',
+      name: 'FamilyChart',
+      globals: {
+        'd3': 'd3'
+      }
+    },
+    plugins: [
+      resolve({
+        preferBuiltins: false,
+        browser: true
+      }),
+      commonjs(),
+      production && terser()
+    ]
+  }
+];

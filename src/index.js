@@ -377,191 +377,84 @@ function createChartWithApi(cont, data, config = {}) {
   };
 
   // ============================================================================
-  // ADVANCED METHOD 4: Advanced View/Display Methods
+  // ADVANCED METHOD 4: Advanced View/Display Methods (MongoDB Enhanced Only)
   // ============================================================================
   
   /**
    * Set custom card component with MongoDB integration
+   * Note: This enhances the existing setCard() method with MongoDB CRUD operations
    * @param {Object} cardComponent - Card component class
-   * @returns {Object} Chart instance
+   * @returns {Object} Enhanced card instance
    */
-  chart.setCard = function(cardComponent) {
-    this._cardComponent = cardComponent;
+  chart.setCardWithMongoDB = function(cardComponent) {
+    // Use the original setCard method
+    const card = this.setCard(cardComponent);
     
-    // Enhanced card component with MongoDB CRUD operations
-    const enhancedCard = class extends cardComponent {
-      constructor(...args) {
-        super(...args);
-        this.api = chart.api;
-      }
+    // Enhance with MongoDB operations
+    if (this.api) {
+      const originalCard = card;
       
       // Override edit functionality to use MongoDB
-      async onEdit(personData) {
-        if (this.api && personData.id) {
+      if (originalCard.onEdit) {
+        const originalOnEdit = originalCard.onEdit.bind(originalCard);
+        originalCard.onEdit = async function(personData) {
           try {
-            await this.api.updatePerson(personData.id, personData);
-            chart.updateData(await this.api.fetchFamily());
+            await chart.api.updatePerson(personData.id, personData);
+            chart.updateData(await chart.api.fetchFamily());
             chart.updateTree({});
           } catch (error) {
             console.error('Failed to save person edit:', error);
           }
-        }
-        if (super.onEdit) {
-          super.onEdit(personData);
-        }
+          originalOnEdit(personData);
+        };
       }
       
       // Override delete functionality to use MongoDB
-      async onDelete(personId) {
-        if (this.api) {
+      if (originalCard.onDelete) {
+        const originalOnDelete = originalCard.onDelete.bind(originalCard);
+        originalCard.onDelete = async function(personId) {
           try {
-            await this.api.deletePerson(personId);
-            chart.updateData(await this.api.fetchFamily());
+            await chart.api.deletePerson(personId);
+            chart.updateData(await chart.api.fetchFamily());
             chart.updateTree({});
           } catch (error) {
             console.error('Failed to delete person:', error);
           }
-        }
-        if (super.onDelete) {
-          super.onDelete(personId);
-        }
+          originalOnDelete(personId);
+        };
       }
-    };
-    
-    return this.setCardComponent(enhancedCard);
-  };
-
-  /**
-   * Apply predefined styles to the chart
-   * @param {string} styleName - Style name (e.g., 'imageRect', 'compact', 'detailed')
-   * @returns {Object} Chart instance
-   */
-  chart.setStyle = function(styleName) {
-    const styles = {
-      imageRect: {
-        node_separation: 250,
-        level_separation: 150,
-        card_width: 220,
-        card_height: 80,
-        show_images: true
-      },
-      compact: {
-        node_separation: 180,
-        level_separation: 120,
-        card_width: 160,
-        card_height: 60,
-        show_images: false
-      },
-      detailed: {
-        node_separation: 300,
-        level_separation: 200,
-        card_width: 280,
-        card_height: 120,
-        show_images: true,
-        show_details: true
-      }
-    };
-    
-    const style = styles[styleName];
-    if (style) {
-      Object.assign(this.store.state, style);
-      this.updateTree({});
     }
     
-    return this;
+    return card;
   };
 
   /**
-   * Configure which fields to display on cards
-   * @param {Array} fields - Array of field configurations
-   * @returns {Object} Chart instance
+   * REMOVED: setStyle() - This method doesn't exist in original family-chart
+   * Original uses configuration passed to createChart() or Card component
    */
-  chart.setCardDisplay = function(fields) {
-    this._cardDisplayFields = fields;
-    
-    // Update card component to use new display fields
-    if (this._cardComponent) {
-      this._cardComponent.displayFields = fields;
-    }
-    
-    return this;
-  };
 
   /**
-   * Zoom to fit all visible cards
-   * @param {number} padding - Padding around the tree
-   * @returns {Object} Chart instance
+   * REMOVED: setCardDisplay() - This method doesn't exist in original family-chart
+   * Original uses card_display property in Card component constructor
    */
-  chart.fitToScreen = function(padding = 50) {
-    const tree = this.store.getTree();
-    if (!tree || !tree.data) return this;
-    
-    const bounds = this.calculateTreeBounds(tree.data);
-    const containerRect = this.cont.getBoundingClientRect();
-    
-    const scaleX = (containerRect.width - padding * 2) / bounds.width;
-    const scaleY = (containerRect.height - padding * 2) / bounds.height;
-    const scale = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
-    
-    const centerX = bounds.x + bounds.width / 2;
-    const centerY = bounds.y + bounds.height / 2;
-    
-    this.zoomToPoint(centerX, centerY, scale);
-    
-    return this;
-  };
 
   /**
-   * Zoom to a specific point
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate  
-   * @param {number} scale - Zoom scale
-   * @returns {Object} Chart instance
+   * REMOVED: fitToScreen(), zoomToPoint(), calculateTreeBounds() 
+   * These don't exist in original - they were new additions
+   * Original has zoom functionality but different API
    */
-  chart.zoomToPoint = function(x, y, scale = 1) {
-    const svg = this.svg || this.cont.querySelector('svg');
-    if (!svg) return this;
-    
-    const transform = `translate(${x}, ${y}) scale(${scale})`;
-    svg.style.transform = transform;
-    
-    return this;
-  };
-
-  /**
-   * Calculate bounding box for tree data
-   * @param {Array} treeData - Tree node data
-   * @returns {Object} Bounds object
-   */
-  chart.calculateTreeBounds = function(treeData) {
-    if (!treeData || treeData.length === 0) {
-      return { x: 0, y: 0, width: 0, height: 0 };
-    }
-    
-    const positions = treeData.map(node => ({ x: node._x || 0, y: node._y || 0 }));
-    const minX = Math.min(...positions.map(p => p.x));
-    const maxX = Math.max(...positions.map(p => p.x));
-    const minY = Math.min(...positions.map(p => p.y));
-    const maxY = Math.max(...positions.map(p => p.y));
-    
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
-    };
-  };
 
   // ============================================================================
-  // ADVANCED METHOD 5: Form and UI Integration
+  // ADVANCED METHOD 5: Form and UI Integration (MongoDB Enhanced)
   // ============================================================================
   
   /**
-   * Create dynamic form for person data
-   * @param {Object} config - Form configuration
-   * @returns {Object} Form builder instance
+   * PARTIALLY EXISTS: createForm() exists in original but with different signature
+   * This enhances the original createForm with MongoDB integration
+   * Original: f3.handlers.createForm({datum, store, fields, ...})
+   * Enhanced: chart.createFormWithMongoDB(config)
    */
-  chart.createForm = function(config) {
+  chart.createFormWithMongoDB = function(config) {
     if (!this._formBuilder) {
       this._formBuilder = new FormBuilder({
         api: this.api,
@@ -586,12 +479,11 @@ function createChartWithApi(cont, data, config = {}) {
   };
 
   /**
-   * Set up person search/selection dropdown
-   * @param {Object} config - Dropdown configuration
-   * @param {HTMLElement} container - Container element
-   * @returns {Object} Person dropdown instance
+   * DOESN'T EXIST: setPersonDropdown() is not in original family-chart
+   * This is a new MongoDB-enhanced feature
+   * Note: Original has some person search functionality but different API
    */
-  chart.setPersonDropdown = function(config = {}, container = null) {
+  chart.setPersonDropdownMongoDB = function(config = {}, container = null) {
     const dropdownContainer = container || this.cont.querySelector('.f3-nav-cont');
     
     if (!dropdownContainer) {
@@ -615,11 +507,11 @@ function createChartWithApi(cont, data, config = {}) {
   };
 
   /**
-   * Enable add relative functionality
-   * @param {Object} config - Add relative configuration
-   * @returns {Object} Chart instance
+   * DOESN'T EXIST: enableAddRelative() and enableRemoveRelative() 
+   * These are new MongoDB-enhanced features
+   * Note: Original has addRelative functionality but in editTree context
    */
-  chart.enableAddRelative = function(config = {}) {
+  chart.enableAddRelativeMongoDB = function(config = {}) {
     this._addRelativeConfig = {
       onAdd: async (relativeData, relationshipType, targetPersonId) => {
         try {
@@ -648,12 +540,7 @@ function createChartWithApi(cont, data, config = {}) {
     return this;
   };
 
-  /**
-   * Enable remove relative functionality
-   * @param {Object} config - Remove relative configuration
-   * @returns {Object} Chart instance
-   */
-  chart.enableRemoveRelative = function(config = {}) {
+  chart.enableRemoveRelativeMongoDB = function(config = {}) {
     this._removeRelativeConfig = {
       onRemove: async (personId, targetPersonId, relationshipType) => {
         try {
