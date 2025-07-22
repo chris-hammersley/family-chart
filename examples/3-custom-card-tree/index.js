@@ -1,32 +1,29 @@
 import f3 from "../../src/index.js"
 
-fetch("./data.json").then(r => r.json()).then(data => {
-  const svg = f3.createSvg(document.querySelector("#FamilyChart"))
-
-  let tree_data = null;
-  let main_id = null;
-
-  update()
-
-  function update() {
-    tree_data = f3.CalculateTree({
-      data,
-      node_separation: 250,
-      level_separation: 150,
-      main_id
-    })
-    updateSvgHeading(svg, tree_data.data[0].data)
-    f3.view(tree_data, svg, Card(onCardClick))
-  }
-
-  function onCardClick(d) {
-    const node = this
-    console.log(d)
-    main_id = d.data.id;
-    update()
-  }
-
-})
+fetch("/api/family")
+  .then(r => r.json())
+  .then(data => {
+    const svg = f3.createSvg(document.querySelector("#FamilyChart"));
+    let tree_data = null;
+    let main_id = null;
+    update();
+    function update() {
+      tree_data = f3.CalculateTree({
+        data,
+        node_separation: 250,
+        level_separation: 150,
+        main_id
+      });
+      updateSvgHeading(svg, tree_data.data[0].data);
+      f3.view(tree_data, svg, Card(onCardClick));
+    }
+    function onCardClick(d) {
+      const node = this;
+      console.log(d);
+      main_id = d.data.id;
+      update();
+    }
+  });
 
 function Card(onClick) {
   const card_dim = {w: 220, h: 70}

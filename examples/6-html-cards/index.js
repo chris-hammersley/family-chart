@@ -1,33 +1,28 @@
 import f3 from "../../src/index.js"
 
-fetch("./data.json").then(r => r.json()).then(data => {
-  let tree, main_id;
-
-  const svg = f3.createSvg(document.querySelector("#FamilyChart"), {onZoom})
-
-  const cont = d3.select(document.querySelector('#FamilyChart'))
-  cont.style('position', 'relative').style('overflow', 'hidden')
-  const cardHtml = cont.append('div').attr('id', 'htmlSvg')
-    .attr('style', 'position: absolute; width: 100%; height: 100%; z-index: 2; top: 0; left: 0')
-  cardHtml.append('div').attr('class', 'cards_view').style('transform-origin', '0 0')
-
-
-  const view_el = d3.select(svg).select('.view')
-
-  function onZoom(e) {
-    const t = e.transform
-
-    view_el.style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `)
-    cardHtml.select('.cards_view').style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `)
-  }
-
-  updateTree({initial: true})
-
-  function updateTree(props) {
-    tree = f3.CalculateTree({ data, main_id })
-    props = Object.assign({}, props || {}, {cardHtml: cardHtml.node()})
-    f3.view(tree, svg, Card(tree, svg), props || {})
-  }
+fetch("/api/family")
+  .then(r => r.json())
+  .then(data => {
+    let tree, main_id;
+    const svg = f3.createSvg(document.querySelector("#FamilyChart"), {onZoom});
+    const cont = d3.select(document.querySelector('#FamilyChart'));
+    cont.style('position', 'relative').style('overflow', 'hidden');
+    const cardHtml = cont.append('div').attr('id', 'htmlSvg')
+      .attr('style', 'position: absolute; width: 100%; height: 100%; z-index: 2; top: 0; left: 0');
+    cardHtml.append('div').attr('class', 'cards_view').style('transform-origin', '0 0');
+    const view_el = d3.select(svg).select('.view');
+    function onZoom(e) {
+      const t = e.transform;
+      view_el.style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `);
+      cardHtml.select('.cards_view').style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `);
+    }
+    updateTree({initial: true});
+    function updateTree(props) {
+      tree = f3.CalculateTree({ data, main_id });
+      props = Object.assign({}, props || {}, {cardHtml: cardHtml.node()});
+      f3.view(tree, svg, Card(tree, svg), props || {});
+    }
+  });
 
   function updateMainId(_main_id) {
     main_id = _main_id
@@ -51,4 +46,4 @@ fetch("./data.json").then(r => r.json()).then(data => {
 
   }
 
-})
+  });

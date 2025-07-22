@@ -64,8 +64,35 @@ Family Chart is a powerful D3.js-based visualization library for creating beauti
 - **Full Customization**: Complete control over your tree's structure and styling
 - **Interactive Features**: Built-in interactivity
 
+
 <!-- GETTING STARTED -->
 ## Getting Started
+
+### MongoDB Setup (Required)
+
+Family Chart now uses MongoDB as the only data source for all examples and runtime usage. You must have a MongoDB instance running (local or cloud, e.g. MongoDB Atlas).
+
+1. Create a `.env.local` file in the project root with:
+   ```
+   MONGODB_URI=mongodb://localhost:27017/familychart
+   ```
+   (or use your Atlas connection string)
+2. Install dependencies:
+   ```bash
+   npm install
+   npm install mongoose
+   ```
+3. Start your MongoDB server if running locally.
+4. Run the app as usual (e.g. `npm run dev` for Next.js or Vite).
+
+### 1. Prerequisites
+
+- **Node.js** (v20+ required)
+- **MongoDB** (local or cloud, e.g. MongoDB Atlas)
+
+### Usage
+
+All data is now read and written via the `/api/family` endpoint, which connects to MongoDB using Mongoose. Local JSON files are no longer used at runtime.
 
 [![Create tree][create-tree-screenshot]](https://donatso.github.io/family-chart-doc/create-tree)
 
@@ -77,11 +104,20 @@ Family Chart is a powerful D3.js-based visualization library for creating beauti
 <!-- USAGE EXAMPLES -->
 ## Usage
 
+
 ### [Static](https://codepen.io/donatso/pen/ExqJVEQ?editors=1000)
 
 ### [React](https://codepen.io/donatso/pen/mdNgeQN?editors=0010)
 
 ### [Vue](https://codepen.io/donatso/pen/poMBjZe)
+
+---
+
+## MongoDB API Usage
+
+All example and demo code now fetches data from `/api/family` (GET for read, POST for create, PUT for update, DELETE for remove). See the example `index.js` files for usage patterns.
+
+**Note:** Local `.json` files are no longer used for runtime data. All data is persisted in MongoDB.
 
 
 ## Examples
