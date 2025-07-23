@@ -57,6 +57,7 @@ export function handleRelsOfNewDatum({datum, data_stash, rel_type, rel_datum}) {
     }
   }
 
+
   function addSpouse(datum) {
     removeIfToAdd();
     if (!rel_datum.rels.spouses) rel_datum.rels.spouses = []
@@ -73,6 +74,7 @@ export function handleRelsOfNewDatum({datum, data_stash, rel_type, rel_datum}) {
   }
 }
 
+export function createNewPerson({data, rels}) {
   return {id: uuidv4(), data: data || {}, rels: rels || {}};
 }
 
@@ -99,4 +101,4 @@ export function addNewPersonAndHandleRels({datum, data_stash, rel_type, rel_datu
   handleRelsOfNewDatum({datum, data_stash, rel_type, rel_datum})
 }
 
-// uuidv4 from 'uuid' is now used for all new person creation
+
