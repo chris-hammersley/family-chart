@@ -377,6 +377,34 @@ function getLinkRelOptions(datum, data) {
   }
 }
 
+// Utility functions for API calls to /api/family (MongoDB)
+// All functions now require honoreeId and authContext
+async function savePersonToDB(person, honoreeId, authContext) {
+  const res = await fetch(`/api/family/${honoreeId}`, {
+    method: person._isNew ? 'POST' : 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authContext?.token ? { 'Authorization': `Bearer ${authContext.token}` } : {})
+    },
+    body: JSON.stringify(person)
+  });
+  if (!res.ok) throw new Error('Failed to save person');
+  return await res.json();
+}
+
+async function deletePersonFromDB(id, honoreeId, authContext) {
+  const res = await fetch(`/api/family/${honoreeId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authContext?.token ? { 'Authorization': `Bearer ${authContext.token}` } : {})
+    },
+    body: JSON.stringify({ id })
+  });
+  if (!res.ok) throw new Error('Failed to delete person');
+}
+
+// Now requires honoreeId and authContext
 function createForm({
   datum,
   store,
@@ -389,7 +417,9 @@ function createForm({
   editFirst,
   link_existing_rel_config,
   getKinshipInfo,
-  onFormCreation
+  onFormCreation,
+  honoreeId,
+  authContext
 }) {
   const form_creator = {
     datum_id: datum.id,
@@ -498,13 +528,23 @@ function createForm({
 
   }
 
-  function submitFormChanges(e) {
+  async function submitFormChanges(e) {
     e.preventDefault();
     const form_data = new FormData(e.target);
     form_data.forEach((v, k) => datum.data[k] = v);
     syncRelReference(datum, store.getData());
     if (datum.to_add) delete datum.to_add;
     if (datum.unknown) delete datum.unknown;
+    // Save to MongoDB with honoreeId and authContext
+    try {
+      datum._isNew = !datum.id;
+      const saved = await savePersonToDB({ ...datum, id: datum.id }, honoreeId, authContext);
+      // Update chart with response (replace datum with saved)
+      Object.assign(datum, saved);
+      store.updateTree({});
+    } catch (err) {
+      console.error('Failed to save person to DB', err);
+    }
     postSubmit();
   }
 
@@ -513,8 +553,14 @@ function createForm({
     postSubmit({link_rel_id: link_rel_id});
   }
 
-  function deletePersonWithPostSubmit() {
+  async function deletePersonWithPostSubmit() {
     deletePerson();
+    try {
+      await deletePersonFromDB(datum.id, honoreeId, authContext);
+      store.updateTree({});
+    } catch (err) {
+      console.error('Failed to delete person from DB', err);
+    }
     postSubmit({delete: true});
   }
 }
