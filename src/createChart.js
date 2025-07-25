@@ -1,37 +1,46 @@
-import d3 from "./d3.js"
-import f3 from "./index.js"
-import editTree from "./CreateTree/editTree.js"
-import linkSpouseText from "./view/elements/LinkSpouseText.js"
-import autocomplete from "./CreateTree/autocomplete.js"
-import { getMaxDepth } from "./CalculateTree/CalculateTree.handlers.js"
-import { calculateKinships, getKinshipsDataStash } from "./CalculateTree/CalculateTree.calculateKinships.js"
 
-export default function(cont, data, honoreeId, authContext) { return new CreateChart(cont, data, honoreeId, authContext) }
+export default function(options) {
+  return new CreateChart(options);
+}
 
-function CreateChart(cont, data, honoreeId, authContext) {
-  this.cont = null
-  this.store = null
-  this.svg = null
-  this.getCard = null
-  this.node_separation = 250
-  this.level_separation = 150
-  this.is_horizontal = false
-  this.single_parent_empty_card = true
-  this.transition_time = 2000
-  this.linkSpouseText = false
-  this.personSearch = null
+function CreateChart(options) {
+  const {
+    cont,
+    data,
+    honoreeId,
+    authContext,
+    node_separation = 250,
+    level_separation = 150,
+    is_horizontal = false,
+    single_parent_empty_card = true,
+    transition_time = 2000,
+    linkSpouseText = false,
+    personSearch = null,
+    is_card_html = false,
+    beforeUpdate = null,
+    afterUpdate = null
+  } = options;
 
-  this.is_card_html = false
+  this.cont = null;
+  this.store = null;
+  this.svg = null;
+  this.getCard = null;
+  this.node_separation = node_separation;
+  this.level_separation = level_separation;
+  this.is_horizontal = is_horizontal;
+  this.single_parent_empty_card = single_parent_empty_card;
+  this.transition_time = transition_time;
+  this.linkSpouseText = linkSpouseText;
+  this.personSearch = personSearch;
+  this.is_card_html = is_card_html;
+  this.beforeUpdate = beforeUpdate;
+  this.afterUpdate = afterUpdate;
+  this.honoreeId = honoreeId;
+  this.authContext = authContext;
 
-  this.beforeUpdate = null
-  this.afterUpdate = null
+  this.init(cont, data);
 
-  this.honoreeId = honoreeId
-  this.authContext = authContext
-
-  this.init(cont, data)
-
-  return this
+  return this;
 }
 
 CreateChart.prototype.init = function(cont, data) {
@@ -211,7 +220,7 @@ CreateChart.prototype.setDuplicateBranchToggle = function(duplicate_branch_toggl
 }
 
 CreateChart.prototype.editTree = function() {
-  return this.editTreeInstance = editTree(this.cont, this.store, this.honoreeId, this.authContext)
+  return this.editTreeInstance = editTree(this.cont, this.store, this.honoreeId, this.authContext);
 }
 
 CreateChart.prototype.updateMain = function(d) {
