@@ -1,8 +1,8 @@
-// https://donatso.github.io/family-chart/ v0.7.2 Copyright 2025 donatso
+//  v0.7.2 Copyright 2025 donatso
 import * as _d3 from 'd3';
 import { v4 } from 'uuid';
 
-var d3 = typeof window === "object" && !!window.d3 ? window.d3 : _d3;
+var d3$1 = typeof window === "object" && !!window.d3 ? window.d3 : _d3;
 
 function sortChildrenWithSpouses(children, datum, data) {
   if (!datum.rels.children) return
@@ -149,7 +149,7 @@ function setupSiblings({tree, data_stash, node_separation, sortChildrenFunction}
 
     const main_x = main.x;
     const spouses_x = (main.spouses || []).map(d => d.x);
-    const x_range = d3.extent([main_x, ...spouses_x]);
+    const x_range = d3$1.extent([main_x, ...spouses_x]);
 
     const main_sorted_index = sorted_siblings.findIndex(d => d.data.id === main.data.id);
     for (let i = 0; i < sorted_siblings.length; i++) {
@@ -203,31 +203,6 @@ function handlePrivateCards({tree, data_stash, private_cards_config}) {
         checkParentsAndSpouses(d0_id);
       });
     }
-  }
-}
-
-function getMaxDepth(d_id, data_stash) {
-  const datum = data_stash.find(d => d.id === d_id);
-  const root_ancestry = d3.hierarchy(datum, hierarchyGetterParents);
-  const root_progeny = d3.hierarchy(datum, hierarchyGetterChildren);
-
-  return {
-    ancestry: root_ancestry.height,
-    progeny: root_progeny.height
-  }
-
-
-  function hierarchyGetterChildren(d) {
-    return [...(d.rels.children || [])]
-      .map(id => data_stash.find(d => d.id === id))
-      .filter(d => d && !d._new_rel_data && !d.to_add)
-  }
-
-  function hierarchyGetterParents(d) {
-    return [d.rels.father, d.rels.mother]
-      .filter(d => d)
-      .map(id => data_stash.find(d => d.id === id))
-      .filter(d => d && !d._new_rel_data && !d.to_add)
   }
 }
 
@@ -296,42 +271,6 @@ function checkIfConnectedToFirstPerson(datum, data_stash) {
       else checkRels(person);
     });
   }
-}
-
-function handleLinkRel(updated_datum, link_rel_id, store_data) {
-  const new_rel_id = updated_datum.id;
-
-  store_data.forEach(d => {
-    if (d.rels.father === new_rel_id) d.rels.father = link_rel_id;
-    if (d.rels.mother === new_rel_id) d.rels.mother = link_rel_id;
-    if ((d.rels.spouses || []).includes(new_rel_id)) {
-      d.rels.spouses = d.rels.spouses.filter(id => id !== new_rel_id);
-      if (!d.rels.spouses.includes(link_rel_id)) d.rels.spouses.push(link_rel_id);
-    }
-    if ((d.rels.children || []).includes(new_rel_id)) {
-      d.rels.children = d.rels.children.filter(id => id !== new_rel_id);
-      if (!d.rels.children.includes(link_rel_id)) d.rels.children.push(link_rel_id);
-    }
-  });
-
-  const link_rel = store_data.find(d => d.id === link_rel_id);
-  const new_rel = store_data.find(d => d.id === new_rel_id);
-  (new_rel.rels.children || []).forEach(child_id => {
-    if (!link_rel.rels.children) link_rel.rels.children = [];
-    if (!link_rel.rels.children.includes(child_id)) link_rel.rels.children.push(child_id);
-  });
-  (new_rel.rels.spouses || []).forEach(spouse_id => {
-    if (!link_rel.rels.spouses) link_rel.rels.spouses = [];
-    if (!link_rel.rels.spouses.includes(spouse_id)) link_rel.rels.spouses.push(spouse_id);
-  });
-
-  if (link_rel.rels.father && new_rel.rels.father) console.error('link rel already has father');
-  if (link_rel.rels.mother && new_rel.rels.mother) console.error('link rel already has mother');
-
-  if (new_rel.rels.father) link_rel.rels.father = new_rel.rels.father;
-  if (new_rel.rels.mother) link_rel.rels.mother = new_rel.rels.mother;
-
-  store_data.splice(store_data.findIndex(d => d.id === new_rel_id), 1);
 }
 
 function getLinkRelOptions(datum, data) {
@@ -758,19 +697,19 @@ function addNewPersonAndHandleRels({datum, data_stash, rel_type, rel_datum}) {
 function manualZoom({amount, svg, transition_time=500}) {
   const el_listener = svg.__zoomObj ? svg : svg.parentNode;  // if we need listener for svg and html, we will use parent node
   const zoom = el_listener.__zoomObj;
-  d3.select(el_listener).transition().duration(transition_time || 0).delay(transition_time ? 100 : 0)  // delay 100 because of weird error of undefined something in d3 zoom
+  d3$1.select(el_listener).transition().duration(transition_time || 0).delay(transition_time ? 100 : 0)  // delay 100 because of weird error of undefined something in d3 zoom
     .call(zoom.scaleBy, amount);
 }
 
 function getCurrentZoom(svg) {
   const el_listener = svg.__zoomObj ? svg : svg.parentNode;
-  const currentTransform = d3.zoomTransform(el_listener);
+  const currentTransform = d3$1.zoomTransform(el_listener);
   return currentTransform
 }
 
 function zoomTo(svg, zoom_level) {
   const el_listener = svg.__zoomObj ? svg : svg.parentNode;
-  const currentTransform = d3.zoomTransform(el_listener);
+  const currentTransform = d3$1.zoomTransform(el_listener);
   manualZoom({amount: zoom_level / currentTransform.k, svg});
 }
 
@@ -1075,8 +1014,8 @@ function CalculateTree({
 
   function calculateTreePositions(datum, rt, is_ancestry) {
     const hierarchyGetter = rt === "children" ? hierarchyGetterChildren : hierarchyGetterParents;
-    const d3_tree = d3.tree().nodeSize([node_separation, level_separation]).separation(separation);
-    const root = d3.hierarchy(datum, hierarchyGetter);
+    const d3_tree = d3$1.tree().nodeSize([node_separation, level_separation]).separation(separation);
+    const root = d3$1.hierarchy(datum, hierarchyGetter);
 
     if (is_ancestry) addSpouseReferences(root);
     trimTree(root, is_ancestry);
@@ -1219,8 +1158,8 @@ function CalculateTree({
 
   function calculateTreeDim(tree, node_separation, level_separation) {
     if (is_horizontal) [node_separation, level_separation] = [level_separation, node_separation];
-    const w_extent = d3.extent(tree, d => d.x);
-    const h_extent = d3.extent(tree, d => d.y);
+    const w_extent = d3$1.extent(tree, d => d.x);
+    const h_extent = d3$1.extent(tree, d => d.y);
     return {
       width: w_extent[1] - w_extent[0]+node_separation, height: h_extent[1] - h_extent[0]+level_separation, x_off: -w_extent[0]+node_separation/2, y_off: -h_extent[0]+level_separation/2
     }
@@ -1441,8 +1380,8 @@ function positionTree({t, svg, transition_time=2000}) {
   const el_listener = svg.__zoomObj ? svg : svg.parentNode;  // if we need listener for svg and html, we will use parent node
   const zoom = el_listener.__zoomObj;
 
-  d3.select(el_listener).transition().duration(transition_time || 0).delay(transition_time ? 100 : 0)  // delay 100 because of weird error of undefined something in d3 zoom
-    .call(zoom.transform, d3.zoomIdentity.scale(t.k).translate(t.x, t.y));
+  d3$1.select(el_listener).transition().duration(transition_time || 0).delay(transition_time ? 100 : 0)  // delay 100 because of weird error of undefined something in d3 zoom
+    .call(zoom.transform, d3$1.zoomIdentity.scale(t.k).translate(t.x, t.y));
 }
 
 function treeFit({svg, svg_dim, tree_dim, with_transition, transition_time}) {
@@ -1739,8 +1678,8 @@ function pathToMain(cards, links, datum, main_datum) {
 }
 
 function createPath(d, is_) {
-  const line = d3.line().curve(d3.curveMonotoneY),
-    lineCurve = d3.line().curve(d3.curveBasis),
+  const line = d3$1.line().curve(d3$1.curveMonotoneY),
+    lineCurve = d3$1.line().curve(d3$1.curveBasis),
     path_data = is_ ? d._d() : d.d;
 
   if (!d.curve) return line(path_data)
@@ -1753,7 +1692,7 @@ function updateLinks(svg, tree, props={}) {
     return acc
   }, {});
   const links_data = Object.values(links_data_dct);
-  const link = d3.select(svg).select(".links_view").selectAll("path.link").data(links_data, d => d.id);
+  const link = d3$1.select(svg).select(".links_view").selectAll("path.link").data(links_data, d => d.id);
   const link_exit = link.exit();
   const link_enter = link.enter().append("path").attr("class", "link");
   const link_update = link_enter.merge(link);
@@ -1763,18 +1702,18 @@ function updateLinks(svg, tree, props={}) {
   link_update.each(linkUpdate);
 
   function linkEnter(d) {
-    d3.select(this).attr("fill", "none").attr("stroke", "#fff").attr("stroke-width", 1).style("opacity", 0)
+    d3$1.select(this).attr("fill", "none").attr("stroke", "#fff").attr("stroke-width", 1).style("opacity", 0)
       .attr("d", createPath(d, true));
   }
 
   function linkUpdate(d) {
-    const path = d3.select(this);
+    const path = d3$1.select(this);
     const delay = props.initial ? calculateDelay(tree, d, props.transition_time) : 0;
     path.transition('path').duration(props.transition_time).delay(delay).attr("d", createPath(d)).style("opacity", 1);
   }
 
   function linkExit(d) {
-    const path = d3.select(this);
+    const path = d3$1.select(this);
     path.transition('op').duration(800).style("opacity", 0);
     path.transition('path').duration(props.transition_time).attr("d", createPath(d, true))
       .on("end", () => path.remove());
@@ -1783,7 +1722,7 @@ function updateLinks(svg, tree, props={}) {
 }
 
 function updateCards(svg, tree, Card, props={}) {
-  const card = d3.select(svg).select(".cards_view").selectAll("g.card_cont").data(tree.data, d => d.data.id),
+  const card = d3$1.select(svg).select(".cards_view").selectAll("g.card_cont").data(tree.data, d => d.data.id),
     card_exit = card.exit(),
     card_enter = card.enter().append("g").attr("class", "card_cont"),
     card_update = card_enter.merge(card);
@@ -1797,7 +1736,7 @@ function updateCards(svg, tree, Card, props={}) {
   card_update.each(cardUpdate);
 
   function cardEnter(d) {
-    d3.select(this)
+    d3$1.select(this)
       .attr("transform", `translate(${d._x}, ${d._y})`)
       .style("opacity", 0);
 
@@ -1809,18 +1748,18 @@ function updateCards(svg, tree, Card, props={}) {
   function cardUpdate(d) {
     Card.call(this, d);
     const delay = props.initial ? calculateDelay(tree, d, props.transition_time) : 0;
-    d3.select(this).transition().duration(props.transition_time).delay(delay).attr("transform", `translate(${d.x}, ${d.y})`).style("opacity", 1);
+    d3$1.select(this).transition().duration(props.transition_time).delay(delay).attr("transform", `translate(${d.x}, ${d.y})`).style("opacity", 1);
   }
 
   function cardExit(d) {
-    const g = d3.select(this);
+    const g = d3$1.select(this);
     g.transition().duration(props.transition_time).style("opacity", 0).attr("transform", `translate(${d._x}, ${d._y})`)
       .on("end", () => g.remove());
   }
 }
 
 function updateCardsHtml(div, tree, Card, props={}) {
-  const card = d3.select(div).select(".cards_view").selectAll("div.card_cont").data(tree.data, d => d.tid),
+  const card = d3$1.select(div).select(".cards_view").selectAll("div.card_cont").data(tree.data, d => d.tid),
     card_exit = card.exit(),
     card_enter = card.enter().append("div").attr("class", "card_cont").style('pointer-events', 'none'),
     card_update = card_enter.merge(card);
@@ -1834,7 +1773,7 @@ function updateCardsHtml(div, tree, Card, props={}) {
   card_update.each(cardUpdate);
 
   function cardEnter(d) {
-    d3.select(this)
+    d3$1.select(this)
       .style('position', 'absolute')
       .style('top', '0').style('left', '0')
       .style("transform", `translate(${d._x}px, ${d._y}px)`)
@@ -1848,18 +1787,18 @@ function updateCardsHtml(div, tree, Card, props={}) {
   function cardUpdate(d) {
     Card.call(this, d);
     const delay = props.initial ? calculateDelay(tree, d, props.transition_time) : 0;
-    d3.select(this).transition().duration(props.transition_time).delay(delay).style("transform", `translate(${d.x}px, ${d.y}px)`).style("opacity", 1);
+    d3$1.select(this).transition().duration(props.transition_time).delay(delay).style("transform", `translate(${d.x}px, ${d.y}px)`).style("opacity", 1);
   }
 
   function cardExit(d) {
-    const g = d3.select(this);
+    const g = d3$1.select(this);
     g.transition().duration(props.transition_time).style("opacity", 0).style("transform", `translate(${d._x}px, ${d._y}px)`)
       .on("end", () => g.remove());
   }
 }
 
 function assignUniqueIdToTreeData(div, tree_data) {
-  const card = d3.select(div).selectAll("div.card_cont_2fake").data(tree_data, d => d.data.id);  // how this doesn't break if there is multiple cards with the same id?
+  const card = d3$1.select(div).selectAll("div.card_cont_2fake").data(tree_data, d => d.data.id);  // how this doesn't break if there is multiple cards with the same id?
   const card_exit = card.exit();
   const card_enter = card.enter().append("div").attr("class", "card_cont_2fake").style('display', 'none').attr("data-id", () => Math.random());
   const card_update = card_enter.merge(card);
@@ -1869,33 +1808,33 @@ function assignUniqueIdToTreeData(div, tree_data) {
   card_update.each(cardUpdate);
 
   function cardEnter(d) {
-    d.unique_id = d3.select(this).attr("data-id");
+    d.unique_id = d3$1.select(this).attr("data-id");
   }
 
   function cardUpdate(d) {
-    d.unique_id = d3.select(this).attr("data-id");
+    d.unique_id = d3$1.select(this).attr("data-id");
   }
 
   function cardExit(d) {
-    d.unique_id = d3.select(this).attr("data-id");
-    d3.select(this).remove();
+    d.unique_id = d3$1.select(this).attr("data-id");
+    d3$1.select(this).remove();
   }
 }
 
 function setupHtmlSvg(getHtmlSvg) {
-  d3.select(getHtmlSvg()).append("div").attr("class", "cards_view_fake").style('display', 'none');  // important for handling data
+  d3$1.select(getHtmlSvg()).append("div").attr("class", "cards_view_fake").style('display', 'none');  // important for handling data
 }
 
 function getCardsViewFake(getHtmlSvg) {
-  return d3.select(getHtmlSvg()).select("div.cards_view_fake").node()
+  return d3$1.select(getHtmlSvg()).select("div.cards_view_fake").node()
 }
 
 function onZoomSetup(getSvgView, getHtmlView) {
   return function onZoom(e) {
     const t = e.transform;
   
-    d3.select(getSvgView()).style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `);
-    d3.select(getHtmlView()).style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `);
+    d3$1.select(getSvgView()).style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `);
+    d3$1.select(getHtmlView()).style('transform', `translate(${t.x}px, ${t.y}px) scale(${t.k}) `);
   }
 }
 
@@ -1911,7 +1850,7 @@ function setupReactiveTreeData(getHtmlSvg) {
 }
 
 function createHtmlSvg(cont) {
-  const f3Canvas = d3.select(cont).select('#f3Canvas');
+  const f3Canvas = d3$1.select(cont).select('#f3Canvas');
   const cardHtml = f3Canvas.append('div').attr('id', 'htmlSvg')
     .attr('style', 'position: absolute; width: 100%; height: 100%; z-index: 2; top: 0; left: 0');
   cardHtml.append('div').attr('class', 'cards_view').style('transform-origin', '0 0');
@@ -1944,7 +1883,7 @@ getUniqueId: getUniqueId
 });
 
 function updateCardsComponent(div, tree, Card, props={}) {
-  const card = d3.select(getCardsViewFake(() => div)).selectAll("div.card_cont_fake").data(tree.data, d => d.data.id),
+  const card = d3$1.select(getCardsViewFake(() => div)).selectAll("div.card_cont_fake").data(tree.data, d => d.data.id),
     card_exit = card.exit(),
     card_enter = card.enter().append("div").attr("class", "card_cont_fake").style('display', 'none'),
     card_update = card_enter.merge(card);
@@ -1958,7 +1897,7 @@ function updateCardsComponent(div, tree, Card, props={}) {
   card_update.each(cardUpdate);
 
   function cardEnter(d) {
-    const card_element = d3.select(Card(d));
+    const card_element = d3$1.select(Card(d));
 
     card_element
       .style('position', 'absolute')
@@ -1969,14 +1908,14 @@ function updateCardsComponent(div, tree, Card, props={}) {
   function cardUpdateNoEnter(d) {}
 
   function cardUpdate(d) {
-    const card_element = d3.select(Card(d));
+    const card_element = d3$1.select(Card(d));
     const delay = props.initial ? calculateDelay(tree, d, props.transition_time) : 0;
     card_element.transition().duration(props.transition_time).delay(delay).style("transform", `translate(${d.x}px, ${d.y}px)`).style("opacity", 1);
   }
 
   function cardExit(d) {
-    const card_element = d3.select(Card(d));
-    const g = d3.select(this);
+    const card_element = d3$1.select(Card(d));
+    const g = d3$1.select(this);
     card_element.transition().duration(props.transition_time).style("opacity", 0).style("transform", `translate(${d._x}px, ${d._y}px)`)
       .on("end", () => g.remove()); // remove the card_cont_fake
   }
@@ -1984,7 +1923,7 @@ function updateCardsComponent(div, tree, Card, props={}) {
 
 function view(tree, svg, Card, props={}) {
 
-  props.initial = props.hasOwnProperty('initial') ? props.initial : !d3.select(svg.parentNode).select('.card_cont').node();
+  props.initial = props.hasOwnProperty('initial') ? props.initial : !d3$1.select(svg.parentNode).select('.card_cont').node();
   props.transition_time = props.hasOwnProperty('transition_time') ? props.transition_time : 2000;
   if (props.cardComponent) updateCardsComponent(props.cardComponent, tree, Card, props);
   else if (props.cardHtml) updateCardsHtml(props.cardHtml, tree, Card, props);
@@ -2033,7 +1972,7 @@ function createSvg(cont, props={}) {
 
   const f3Canvas = getOrCreateF3Canvas(cont);
 
-  const temp_div = d3.create('div').node();
+  const temp_div = d3$1.create('div').node();
   temp_div.innerHTML = svg_html;
   const svg = temp_div.querySelector('svg');
   f3Canvas.appendChild(svg);
@@ -2047,7 +1986,7 @@ function createSvg(cont, props={}) {
   function getOrCreateF3Canvas(cont) {
     let f3Canvas = cont.querySelector('#f3Canvas');
     if (!f3Canvas) {
-      f3Canvas = d3.create('div').attr('id', 'f3Canvas').attr('style', 'position: relative; overflow: hidden; width: 100%; height: 100%;').node();
+      f3Canvas = d3$1.create('div').attr('id', 'f3Canvas').attr('style', 'position: relative; overflow: hidden; width: 100%; height: 100%;').node();
     }
     return f3Canvas
   }
@@ -2056,15 +1995,15 @@ function createSvg(cont, props={}) {
 function setupZoom(el, props={}) {
   if (el.__zoom) return
   const view = el.querySelector('.view'),
-    zoom = d3.zoom().on("zoom", (props.onZoom || zoomed));
+    zoom = d3$1.zoom().on("zoom", (props.onZoom || zoomed));
 
-  d3.select(el).call(zoom);
+  d3$1.select(el).call(zoom);
   el.__zoomObj = zoom;
 
   if (props.zoom_polite) zoom.filter(zoomFilter);
 
   function zoomed(e) {
-    d3.select(view).attr("transform", e.transform);
+    d3$1.select(view).attr("transform", e.transform);
   }
 
   function zoomFilter(e) {
@@ -2671,7 +2610,7 @@ function createHistory(store, getStoreDataCopy, onUpdate) {
 }
 
 function createHistoryControls(cont, history) {
-  const history_controls = d3.select(cont).append("div").attr("class", "f3-history-controls");
+  const history_controls = d3$1.select(cont).append("div").attr("class", "f3-history-controls");
   cont.insertBefore(history_controls.node(), cont.firstChild);
   const back_btn = history_controls.append("button").attr("class", "f3-back-button").on("click", () => {
     history.back();
@@ -2704,7 +2643,7 @@ function createHistoryControls(cont, history) {
 
   function destroy() {
     history = null;
-    d3.select(cont).select('.f3-history-controls').remove();
+    d3$1.select(cont).select('.f3-history-controls').remove();
   }
 }
 
@@ -2940,7 +2879,7 @@ function miniTree(d, props) {
   if (d.data.to_add) return
   const card_dim = props.card_dim;
   if (d.all_rels_displayed) return
-  const g = d3.create('svg:g').html(MiniTree({d,card_dim}).template);
+  const g = d3$1.create('svg:g').html(MiniTree({d,card_dim}).template);
   g.on("click", function (e) {
     e.stopPropagation();
     if (props.onMiniTreeClick) props.onMiniTreeClick.call(this, e, d);
@@ -2952,7 +2891,7 @@ function miniTree(d, props) {
 function lineBreak(d, props) {
   if (d.data.to_add) return
   const card_dim = props.card_dim;
-  const g = d3.create('svg:g').html(LinkBreakIconWrapper({d,card_dim}).template);
+  const g = d3$1.create('svg:g').html(LinkBreakIconWrapper({d,card_dim}).template);
   g.on("click", (e) => {e.stopPropagation();cardShowHideRels(props.store, {d});});
   return g.node()
 }
@@ -2963,14 +2902,14 @@ function cardBody(d, props) {
 
   let g;
   if (!d.data.to_add) {
-    g = d3.create('svg:g').html(CardBody({d, card_dim, card_display: props.card_display}).template);
+    g = d3$1.create('svg:g').html(CardBody({d, card_dim, card_display: props.card_display}).template);
     g.on("click", function (e) {
       e.stopPropagation();
       if (props.onCardClick) props.onCardClick.call(this, e, d);
       else cardChangeMain(props.store, {d});
     });
   } else {
-    g = d3.create('svg:g').html(CardBodyAddNew({d, card_dim, card_add: props.cardEditForm, label: unknown_lbl}).template);
+    g = d3$1.create('svg:g').html(CardBodyAddNew({d, card_dim, card_add: props.cardEditForm, label: unknown_lbl}).template);
     g.on("click", (e) => {e.stopPropagation();cardEdit(props.store, {d, cardEditForm: props.cardEditForm});});
   }
   return g.node()
@@ -2979,14 +2918,14 @@ function cardBody(d, props) {
 function cardImage(d, props) {
   if (d.data.to_add) return
   const card_dim = props.card_dim;
-  const g = d3.create('svg:g').html(CardImage({d, image: d.data.data.avatar || null, card_dim, maleIcon: null, femaleIcon: null}).template);
+  const g = d3$1.create('svg:g').html(CardImage({d, image: d.data.data.avatar || null, card_dim, maleIcon: null, femaleIcon: null}).template);
   return g.node()
 }
 
 function cardEditIcon(d, props) {
   if (d.data.to_add) return
   const card_dim = props.card_dim;
-  const g = d3.create('svg:g').html(PencilIcon({card_dim, x: card_dim.w-46, y: card_dim.h-20}).template);
+  const g = d3$1.create('svg:g').html(PencilIcon({card_dim, x: card_dim.w-46, y: card_dim.h-20}).template);
   g.on("click", (e) => {e.stopPropagation();cardEdit(props.store, {d, cardEditForm: props.cardEditForm});});
 
   return g.node()
@@ -2995,7 +2934,7 @@ function cardEditIcon(d, props) {
 function cardAddIcon(d, props) {
   if (d.data.to_add) return
   const card_dim = props.card_dim;
-  const g = d3.create('svg:g').html(PlusIcon({card_dim, x: card_dim.w-26, y: card_dim.h-20}).template);
+  const g = d3$1.create('svg:g').html(PlusIcon({card_dim, x: card_dim.w-26, y: card_dim.h-20}).template);
   g.on("click", (e) => {e.stopPropagation();props.addRelative({d});});
 
   return g.node()
@@ -3054,7 +2993,7 @@ function Card(props) {
     const gender_class = d.data.data.gender === 'M' ? 'card-male' : d.data.data.gender === 'F' ? 'card-female' : 'card-genderless';
     const card_dim = props.card_dim;
 
-    const card = d3.create('svg:g').attr('class', `card ${gender_class}`).attr('transform', `translate(${[-card_dim.w / 2, -card_dim.h / 2]})`);
+    const card = d3$1.create('svg:g').attr('class', `card ${gender_class}`).attr('transform', `translate(${[-card_dim.w / 2, -card_dim.h / 2]})`);
     card.append('g').attr('class', 'card-inner').attr('clip-path', 'url(#card_clip)');
 
     this.innerHTML = '';
@@ -3128,7 +3067,7 @@ function handleCardDuplicateToggle(node, d, is_horizontal, updateTree) {
 
   card_inner.style.zIndex = 1;
 
-  const toggle_div = d3.select(card)
+  const toggle_div = d3$1.select(card)
   .append('div')
   .attr('class', 'f3-toggle-div')
   .attr('style', 'cursor: pointer; width: 60px; height: 60px;position: absolute; z-index: -1;')
@@ -3163,11 +3102,11 @@ function handleCardDuplicateToggle(node, d, is_horizontal, updateTree) {
   .style('color', toggle_is_off ? '#585656' : '#61bf52')
   .style('padding', '0');
 
-  d3.select(card)
+  d3$1.select(card)
   .select('.f3-toggle-icon .f3-small-circle')
   .style('fill', '#fff');
 
-  d3.select(card)
+  d3$1.select(card)
   .select('.f3-toggle-icon')
   .append('text')
   .attr('transform', toggle_is_off ? 'translate(10.6, 14.5)' : 'translate(4.1, 14.5)')
@@ -3185,7 +3124,7 @@ function handleCardDuplicateToggle(node, d, is_horizontal, updateTree) {
       if (is_horizontal) transform = 'translate(11, -22)rotate(90)';
       else transform = 'translate(-7, -32)rotate(180)';
     }
-    d3.select(card)
+    d3$1.select(card)
     .select('.f3-toggle-div')
     .insert('div')
     .html(miniTreeSvgIcon())
@@ -3218,8 +3157,8 @@ function CardHtml(props) {
     this.querySelector('.card').addEventListener('click', e => props.onCardClick(e, d));
     if (props.onCardUpdate) props.onCardUpdate.call(this, d);
 
-    if (props.onCardMouseenter) d3.select(this).select('.card').on('mouseenter', e => props.onCardMouseenter(e, d));
-    if (props.onCardMouseleave) d3.select(this).select('.card').on('mouseleave', e => props.onCardMouseleave(e, d));
+    if (props.onCardMouseenter) d3$1.select(this).select('.card').on('mouseenter', e => props.onCardMouseenter(e, d));
+    if (props.onCardMouseleave) d3$1.select(this).select('.card').on('mouseleave', e => props.onCardMouseleave(e, d));
     if (d.duplicate) handleCardDuplicateHover(this, d);
     if (props.duplicate_branch_toggle) handleCardDuplicateToggle(this, d, props.store.state.is_horizontal, props.store.updateTree);
     if (location.origin.includes('localhost')) {
@@ -3227,7 +3166,7 @@ function CardHtml(props) {
       d.__label = d.data.data['first name'];
       if (d.data.to_add) {
         const spouse = d.spouse || d._spouse || null;
-        if (spouse) d3.select(this).select('.card').attr('data-to-add', spouse.data.data['first name']);
+        if (spouse) d3$1.select(this).select('.card').attr('data-to-add', spouse.data.data['first name']);
       }
     }
   }
@@ -3359,11 +3298,11 @@ function CardHtml(props) {
   }
 
   function handleCardDuplicateHover(node, d) {
-    d3.select(node).on('mouseenter', e => {
-      d3.select(node.closest('.cards_view')).selectAll('.card_cont').select('.card').classed('f3-card-duplicate-hover', d0 => d0.data.id === d.data.id);
+    d3$1.select(node).on('mouseenter', e => {
+      d3$1.select(node.closest('.cards_view')).selectAll('.card_cont').select('.card').classed('f3-card-duplicate-hover', d0 => d0.data.id === d.data.id);
     });
-    d3.select(node).on('mouseleave', e => {
-      d3.select(node.closest('.cards_view')).selectAll('.card_cont').select('.card').classed('f3-card-duplicate-hover', false);
+    d3$1.select(node).on('mouseleave', e => {
+      d3$1.select(node.closest('.cards_view')).selectAll('.card_cont').select('.card').classed('f3-card-duplicate-hover', false);
     });
   }
 }
@@ -3376,7 +3315,7 @@ function CardSvg(props) {
     const gender_class = d.data.data.gender === 'M' ? 'card-male' : d.data.data.gender === 'F' ? 'card-female' : 'card-genderless';
     const card_dim = props.card_dim;
 
-    const card = d3.create('svg:g').attr('class', `card ${gender_class}`).attr('transform', `translate(${[-card_dim.w / 2, -card_dim.h / 2]})`);
+    const card = d3$1.create('svg:g').attr('class', `card ${gender_class}`).attr('transform', `translate(${[-card_dim.w / 2, -card_dim.h / 2]})`);
     card.append('g').attr('class', 'card-inner').attr('clip-path', 'url(#card_clip)');
 
     this.innerHTML = '';
@@ -3390,7 +3329,7 @@ function CardSvg(props) {
     if (d.data._new_rel_data) {
       appendTemplate(CardBodyOutline({d,card_dim,is_new:d.data.to_add}).template, card.node(), true);
       appendTemplate(CardBodyAddNewRel({d,card_dim,label: d.data._new_rel_data.label}).template, this.querySelector('.card-inner'), true);
-      d3.select(this.querySelector('.card-inner'))
+      d3$1.select(this.querySelector('.card-inner'))
       .append('g')
       .attr('class', 'card-edit-icon')
       .attr('fill', 'currentColor')
@@ -3435,12 +3374,12 @@ function InfoPopup(cont, onClose) {
 }
 
 InfoPopup.prototype.init = function() {
-  this.popup_cont = d3.select(this.cont).append('div').attr('class', 'f3-popup').node();
+  this.popup_cont = d3$1.select(this.cont).append('div').attr('class', 'f3-popup').node();
   this.create();
 };
 
 InfoPopup.prototype.create = function() {
-  const popup = d3.select(this.popup_cont);
+  const popup = d3$1.select(this.popup_cont);
   popup.html(`
     <div class="f3-popup-content">
       <span class="f3-popup-close">&times;</span>
@@ -3461,7 +3400,7 @@ InfoPopup.prototype.create = function() {
 };
 
 InfoPopup.prototype.activate = function(content) {
-  if (content) d3.select(this.popup_cont).select('.f3-popup-content-inner').node().appendChild(content);
+  if (content) d3$1.select(this.popup_cont).select('.f3-popup-content-inner').node().appendChild(content);
   this.open();
 };
 
@@ -3484,1691 +3423,48 @@ CardHtml: CardHtml,
 CardSvg: CardSvg
 });
 
-var addRelative = (...args) => { return new AddRelative(...args) };
-
-function AddRelative(store, onActivate, cancelCallback) {
-  this.store = store;
-
-  this.onActivate = onActivate;
-  this.cancelCallback = cancelCallback;
-
-  this.datum = null;
-
-  this.onChange = null;
-  this.onCancel = null;
-
-  this.is_active = false;
-
-  this.addRelLabels = this.addRelLabelsDefault();
-
-  return this
+function createChart(options) {
+  return new CreateChart(options);
 }
 
-AddRelative.prototype.activate = function(datum) {
-  if (this.is_active) this.onCancel();
-  this.onActivate();
-  this.is_active = true;
-  this.store.state.one_level_rels = true;
+function CreateChart(options) {
+  const {
+    cont,
+    data,
+    honoreeId,
+    authContext,
+    node_separation = 250,
+    level_separation = 150,
+    is_horizontal = false,
+    single_parent_empty_card = true,
+    transition_time = 2000,
+    linkSpouseText = false,
+    personSearch = null,
+    is_card_html = false,
+    beforeUpdate = null,
+    afterUpdate = null
+  } = options;
 
-  const store = this.store;
-
-  this.datum = datum;
-  let gender_stash = this.datum.data.gender;
-
-  addDatumRelsPlaceholders(datum, this.getStoreData(), this.addRelLabels);
-  store.updateTree({});
-
-  this.onChange = onChange.bind(this);
-  this.onCancel = onCancel.bind(this);
-
-  function onChange(updated_datum, props) {
-    if (updated_datum?._new_rel_data) {
-      if (props?.link_rel_id) handleLinkRel(updated_datum, props.link_rel_id, store.getData());
-      else delete updated_datum._new_rel_data;
-    } else if (updated_datum.id === datum.id) {
-      if (updated_datum.data.gender !== gender_stash) updateGendersForNewRelatives();
-    } else {
-      console.error('Something went wrong');
-    }
-
-    function updateGendersForNewRelatives() {
-      gender_stash = updated_datum.data.gender;
-      // if gender on main datum is changed, we need to switch mother/father ids for new children
-      const data = store.getData();
-      data.forEach(d => {
-        const rd = d._new_rel_data;
-        if (!rd) return
-        if (rd.rel_type === 'spouse') d.data.gender = d.data.gender === 'M' ? 'F' : 'M';
-        if (['son', 'daughter'].includes(rd.rel_type)) {
-          [d.rels.father, d.rels.mother] = [d.rels.mother, d.rels.father];
-        }
-      });
-    }
-  }
-
-  function onCancel() {
-    if (!this.is_active) return
-    this.is_active = false;
-    this.store.state.one_level_rels = false;
-
-    this.cleanUp();
-    this.cancelCallback(this.datum);
-
-    this.datum = null;
-    this.onChange = null;
-    this.onCancel = null;
-  }
-
-};
-
-AddRelative.prototype.setAddRelLabels = function(add_rel_labels) {
-  if (typeof add_rel_labels !== 'object') {
-    console.error('add_rel_labels must be an object');
-    return
-  }
-  for (let key in add_rel_labels) {
-    this.addRelLabels[key] = add_rel_labels[key];
-  }
-  return this
-};
-
-AddRelative.prototype.addRelLabelsDefault = function() {
-  return {
-    father: 'Add Father',
-    mother: 'Add Mother',
-    spouse: 'Add Spouse',
-    son: 'Add Son',
-    daughter: 'Add Daughter'
-  }
-};
-
-AddRelative.prototype.getStoreData = function() {
-  return this.store.getData()
-};
-
-AddRelative.prototype.cleanUp = function(data) {
-  if (!data) data = this.store.getData();
-  for (let i = data.length - 1; i >= 0; i--) {
-    const d = data[i];
-    if (d._new_rel_data) {
-      data.forEach(d2 => {
-        if (d2.rels.father === d.id) delete d2.rels.father;
-        if (d2.rels.mother === d.id) delete d2.rels.mother;
-        if ((d2.rels.children || []).includes(d.id)) d2.rels.children.splice(d2.rels.children.indexOf(d.id), 1);
-        if ((d2.rels.spouses || []).includes(d.id)) d2.rels.spouses.splice(d2.rels.spouses.indexOf(d.id), 1);
-      });
-      data.splice(i, 1);
-    }
-  }
-
-  return data
-};
-
-function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
-  if (!datum.rels.father) {
-    const father = createNewPerson({data: {gender: "M"}, rels: {children: [datum.id]}});
-    father._new_rel_data = {rel_type: "father", label: addRelLabels.father, rel_id: datum.id};
-    datum.rels.father = father.id;
-    store_data.push(father);
-  }
-  if (!datum.rels.mother) {
-    const mother = createNewPerson({data: {gender: "F"}, rels: {children: [datum.id]}});
-    mother._new_rel_data = {rel_type: "mother", label: addRelLabels.mother, rel_id: datum.id};
-    datum.rels.mother = mother.id;
-    store_data.push(mother);
-  }
-  const mother = store_data.find(d => d.id === datum.rels.mother);
-  const father = store_data.find(d => d.id === datum.rels.father);
-
-  if (!mother.rels.spouses) mother.rels.spouses = [];
-  if (!father.rels.spouses) father.rels.spouses = [];
-  if (!mother.rels.spouses.includes(father.id)) mother.rels.spouses.push(father.id);
-  if (!father.rels.spouses.includes(mother.id)) father.rels.spouses.push(mother.id);
-
-  if (!mother.rels.children) mother.rels.children = [];
-  if (!father.rels.children) father.rels.children = [];
-  if (!mother.rels.children.includes(datum.id)) mother.rels.children.push(datum.id);
-  if (!father.rels.children.includes(datum.id)) father.rels.children.push(datum.id);
-
-  if (!datum.rels.spouses) datum.rels.spouses = [];
-
-  if (datum.rels.children) {
-    let new_spouse;
-    datum.rels.children.forEach(child_id => {
-      const child = store_data.find(d => d.id === child_id);
-      if (!child.rels.mother) {
-        if (!new_spouse) new_spouse = createNewPerson({data: {gender: "F"}, rels: {spouses: [datum.id], children: []}});
-        new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id};
-        new_spouse.rels.children.push(child.id);
-        datum.rels.spouses.push(new_spouse.id);
-        child.rels.mother = new_spouse.id;
-        store_data.push(new_spouse);
-      }
-      if (!child.rels.father) {
-        if (!new_spouse) new_spouse = createNewPerson({data: {gender: "M"}, rels: {spouses: [datum.id], children: []}});
-        new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id};
-        new_spouse.rels.children.push(child.id);
-        datum.rels.spouses.push(new_spouse.id);
-        child.rels.father = new_spouse.id;
-        store_data.push(new_spouse);
-      }
-    });
-  }
-
-  const spouse_gender = datum.data.gender === "M" ? "F" : "M";
-  const new_spouse = createNewPerson({data: {gender: spouse_gender}, rels: {spouses: [datum.id]}});
-  new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id};
-  datum.rels.spouses.push(new_spouse.id);
-  store_data.push(new_spouse);
-
-  if (!datum.rels.children) datum.rels.children = [];
-  datum.rels.spouses.forEach(spouse_id => {
-    const spouse = store_data.find(d => d.id === spouse_id);
-    const mother_id = datum.data.gender === "M" ? spouse.id : datum.id;
-    const father_id = datum.data.gender === "F" ? spouse.id : datum.id;
-    if (!spouse.rels.children) spouse.rels.children = [];
-    
-    const new_son = createNewPerson({data: {gender: "M"}, rels: {father: father_id, mother: mother_id}});
-    new_son._new_rel_data = {rel_type: "son", label: addRelLabels.son, other_parent_id: spouse.id, rel_id: datum.id};
-    spouse.rels.children.push(new_son.id);
-    datum.rels.children.push(new_son.id);
-    store_data.push(new_son);
-
-    const new_daughter = createNewPerson({data: {gender: "F"}, rels: {mother: mother_id, father: father_id}});
-    new_daughter._new_rel_data = {rel_type: "daughter", label: addRelLabels.daughter, other_parent_id: spouse.id, rel_id: datum.id};
-    spouse.rels.children.push(new_daughter.id);
-    datum.rels.children.push(new_daughter.id);
-    store_data.push(new_daughter);
-  });
-
-  return store_data
-}
-
-var removeRelative = (...args) => { return new RemoveRelative(...args) };
-
-function RemoveRelative(store, onActivate, cancelCallback, modal) {
-  this.store = store;
-
-  this.onActivate = onActivate;
-  this.cancelCallback = cancelCallback;
-  this.modal = modal;
-
-  this.datum = null;
-
-  this.onChange = null;
-  this.onCancel = null;
-
-  this.is_active = false;
-
-  return this
-}
-
-RemoveRelative.prototype.activate = function(datum) {
-  if (this.is_active) this.onCancel();
-  this.onActivate();
-  this.is_active = true;
-  this.store.state.one_level_rels = true;
-
-  const store = this.store;
-
-  this.datum = datum;
-
-  store.updateTree({});
-
-  this.onChange = onChange.bind(this);
-  this.onCancel = onCancel.bind(this);
-
-  function onChange(rel_tree_datum, onAccept) {
-    const rel_type = findRelType(rel_tree_datum);
-
-    const rels = datum.rels;
-    if (rel_type === 'father') handleFatherRemoval.call(this);
-    else if (rel_type === 'mother') handleMotherRemoval.call(this);
-    else if (rel_type === 'spouse') handleSpouseRemoval.call(this);
-    else if (rel_type === 'children') handleChildrenRemoval.call(this);
-
-    function handleFatherRemoval() {
-      const father = store.getDatum(rels.father);
-      father.rels.children = father.rels.children.filter(id => id !== datum.id);
-      rels.father = null;
-      onAccept();
-    }
-
-    function handleMotherRemoval() {
-      const mother = store.getDatum(rels.mother);
-      mother.rels.children = mother.rels.children.filter(id => id !== datum.id);
-      rels.mother = null;
-      onAccept();
-    }
-
-    function handleSpouseRemoval() {
-      const spouse = rel_tree_datum.data;
-      if (checkIfChildrenWithSpouse()) openModal.call(this);
-      else remove.call(this, true);
-      
-      function checkIfChildrenWithSpouse() {
-        const children = spouse.rels.children || [];
-        return children.some(ch_id => {
-          const child = store.getDatum(ch_id);
-          if (child.rels.father === spouse.id) return true
-          if (child.rels.mother === spouse.id) return true
-          return false
-        })
-      }
-
-      function openModal() {
-        const current_gender_class = datum.data.gender === 'M' ? 'f3-male-bg' : datum.data.gender === 'F' ? 'f3-female-bg' : null;
-        const spouse_gender_class = spouse.data.gender === 'M' ? 'f3-male-bg' : spouse.data.gender === 'F' ? 'f3-female-bg' : null;
-  
-        const div = d3.create('div').html(`
-          <p>You are removing a spouse relationship. Since there are shared children, please choose which parent should keep them in the family tree.</p>
-          <div class="f3-modal-options">
-            <button data-option="assign-to-current" class="f3-btn ${current_gender_class}">Keep children with current person</button>
-            <button data-option="assign-to-spouse" class="f3-btn ${spouse_gender_class}">Keep children with spouse</button>
-          </div>
-        `);
-  
-        div.selectAll('[data-option="assign-to-current"]').on('click', () => {
-          remove(true);
-          this.modal.close();
-        });
-  
-        div.selectAll('[data-option="assign-to-spouse"]').on('click', () => {
-          remove(false);
-          this.modal.close();
-        });
-  
-        this.modal.activate(div.node());
-      }
-      
-      function remove(to_current) {
-        rel_tree_datum.data.rels.spouses = rel_tree_datum.data.rels.spouses.filter(id => id !== datum.id);
-        rels.spouses = rels.spouses.filter(id => id !== rel_tree_datum.data.id);
-        const childrens_parent = to_current ? datum : rel_tree_datum.data;
-        const other_parent = to_current ? rel_tree_datum.data : datum;
-        (rels.children || []).forEach(id => {
-          const child = store.getDatum(id);
-          if (child.rels.father === other_parent.id) child.rels.father = null;
-          if (child.rels.mother === other_parent.id) child.rels.mother = null;
-        });
-        if (other_parent.rels.children) {
-          other_parent.rels.children = other_parent.rels.children.filter(ch_id => !(childrens_parent.rels.children || []).includes(ch_id));
-        }
-        onAccept();
-      }
-    }
-
-    function handleChildrenRemoval() {
-      rels.children = rels.children.filter(id => id !== rel_tree_datum.data.id);
-      const datum_rel_type = rel_tree_datum.data.rels.father === datum.id ? 'father' : 'mother';
-      rel_tree_datum.data.rels[datum_rel_type] = null;
-      onAccept();
-    }
-
-    function findRelType(d) {
-      if (d.is_ancestry) {
-        if (datum.rels.father === d.data.id) return 'father'
-        if (datum.rels.mother === d.data.id) return 'mother'
-      } 
-      else if (d.spouse) {
-        if (datum.rels.spouses.includes(d.data.id)) return 'spouse'
-      }
-      else {
-        if (datum.rels.children.includes(d.data.id)) return 'children'
-      }
-      return null
-    }
-  }
-
-  function onCancel() {
-    if (!this.is_active) return
-    this.is_active = false;
-    this.store.state.one_level_rels = false;
-
-    this.cancelCallback(this.datum);
-
-    this.datum = null;
-    this.onChange = null;
-    this.onCancel = null;
-  }
-
-};
-
-function modal(...args) { return new Modal(...args) }
-
-function Modal(cont) {
-
-  this.cont = cont;
-  this.modal_cont = null;
-  this.active = false;
-  this.onClose = null;
-
-  this.init();
-}
-
-Modal.prototype.init = function() {
-  this.modal_cont = d3.select(this.cont).append('div').attr('class', 'f3-modal').node();
-  d3.select(this.modal_cont).style('display', 'none');
-  this.create();
-};
-
-Modal.prototype.create = function() {
-  const modal = d3.select(this.modal_cont);
-  modal.html(`
-    <div class="f3-modal-content">
-      <span class="f3-modal-close">&times;</span>
-      <div class="f3-modal-content-inner"></div>
-      <div class="f3-modal-content-bottom"></div>
-    </div>
-  `);
-
-  
-  modal.select('.f3-modal-close').on('click', () => {
-    this.close();
-  });
-
-  modal.on('click', (event) => {
-    if (event.target == modal.node()) {
-      this.close();
-    }
-  });
-};
-
-Modal.prototype.activate = function(content, {boolean, onAccept, onCancel}={}) {
-  this.reset();
-
-  if (typeof content === 'string') {
-    d3.select(this.modal_cont).select('.f3-modal-content-inner').html(content);
-  }
-  else {
-    d3.select(this.modal_cont).select('.f3-modal-content-inner').node().appendChild(content);
-  }
-
-  if (boolean) {
-    d3.select(this.modal_cont).select('.f3-modal-content-bottom').html(`
-      <button class="f3-modal-accept f3-btn">Accept</button>
-      <button class="f3-modal-cancel f3-btn">Cancel</button>
-    `);
-    d3.select(this.modal_cont).select('.f3-modal-accept').on('click', () => {onAccept(); this.reset(); this.close();});
-    d3.select(this.modal_cont).select('.f3-modal-cancel').on('click', () => {this.close();});
-    this.onClose = onCancel;
-  }
-
-  this.open();
-};
-
-Modal.prototype.reset = function() {
-  this.onClose = null;
-  d3.select(this.modal_cont).select('.f3-modal-content-inner').html('');
-  d3.select(this.modal_cont).select('.f3-modal-content-bottom').html('');
-};
-
-Modal.prototype.open = function() {
-  this.modal_cont.style.display = 'block';
-  this.active = true;
-};
-
-Modal.prototype.close = function() {
-  this.modal_cont.style.display = 'none';
-  this.active = false;
-  if (this.onClose) this.onClose();
-};
-
-// https://support.ancestry.co.uk/s/article/Understanding-Kinship-Terms
-function calculateKinships(d_id, data_stash, kinship_info_config={}) {
-  const main_datum = data_stash.find(d => d.id === d_id);
-  const kinships = {};
-  loopCheck(main_datum.id, 'self', 0);
-  setupHalfKinships(kinships);
-  if (kinship_info_config.show_in_law) setupInLawKinships(kinships, data_stash);
-  setupKinshipsGender(kinships);
-
-  return kinships
-
-  function loopCheck(d_id, kinship, depth, prev_rel_id=undefined) {
-    if (!d_id) return
-    if (kinships[d_id] && kinships[d_id] !== kinship) console.error('kinship mismatch, kinship 1: ', kinships[d_id], 'kinship 2: ', kinship);
-    if (kinships[d_id]) return
-    if (kinship) kinships[d_id] = kinship;
-    const datum = data_stash.find(d => d.id === d_id);
-    const rels = datum.rels;
-    if (kinship === 'self') {
-      loopCheck(rels.father, 'parent', depth - 1, d_id);
-      loopCheck(rels.mother, 'parent', depth - 1, d_id);
-      (rels.spouses || []).forEach(id => loopCheck(id, 'spouse', depth));
-      (rels.children || []).forEach(id => loopCheck(id, 'child', depth + 1));
-    }
-    else if (kinship === 'parent') {
-      loopCheck(rels.father, 'grandparent', depth - 1, d_id);
-      loopCheck(rels.mother, 'grandparent', depth - 1, d_id);
-      (rels.children || []).forEach(id => {
-        if (prev_rel_id && prev_rel_id === id) return
-        loopCheck(id, 'sibling', depth+1);
-      });
-    }
-    else if (kinship === 'spouse') ;
-    else if (kinship === 'child') {
-      (rels.children || []).forEach(id => loopCheck(id, 'grandchild', depth + 1));
-    }
-    else if (kinship === 'sibling') {
-      (rels.children || []).forEach(id => loopCheck(id, 'nephew', depth + 1));
-    }
-    else if (kinship === 'grandparent') {
-      if (!prev_rel_id) console.error(`${kinship} should have prev_rel_id`);
-      loopCheck(rels.father, 'great-grandparent', depth - 1, d_id);
-      loopCheck(rels.mother, 'great-grandparent', depth - 1, d_id);
-      (rels.children || []).forEach(id => {
-        if (prev_rel_id && prev_rel_id === id) return
-        loopCheck(id, 'uncle', depth + 1);
-      });
-    }
-    else if (kinship.includes('grandchild')) {
-      (rels.children || []).forEach(id => loopCheck(id, getGreatKinship(kinship, depth + 1), depth + 1));
-    }
-    else if (kinship.includes('great-grandparent')) {
-      if (!prev_rel_id) console.error(`${kinship} should have prev_rel_id`);
-      loopCheck(rels.father, getGreatKinship(kinship, depth - 1), depth - 1, d_id);
-      loopCheck(rels.mother, getGreatKinship(kinship, depth - 1), depth - 1, d_id);
-      (rels.children || []).forEach(id => {
-        if (prev_rel_id && prev_rel_id === id) return
-        const great_count = getGreatCount(depth + 1);
-        if (great_count === 0) loopCheck(id, 'granduncle', depth + 1);
-        else if (great_count > 0) loopCheck(id, getGreatKinship('granduncle', depth + 1), depth + 1);
-        else console.error(`${kinship} should have great_count > -1`);
-      });
-    }
-    else if (kinship === 'nephew') {
-      (rels.children || []).forEach(id => loopCheck(id, 'grandnephew', depth + 1));
-    }
-    else if (kinship.includes('grandnephew')) {
-      (rels.children || []).forEach(id => loopCheck(id, getGreatKinship(kinship, depth + 1), depth + 1));
-    }
-    else if (kinship === 'uncle') {
-      (rels.children || []).forEach(id => loopCheck(id, '1st Cousin', depth + 1));
-    }
-    else if (kinship === 'granduncle') {
-      (rels.children || []).forEach(id => loopCheck(id, '1st Cousin 1x removed', depth + 1));
-    }
-    else if (kinship.includes('great-granduncle')) {
-      const child_depth = depth + 1;
-      const removed_count = Math.abs(child_depth);
-      (rels.children || []).forEach(id => loopCheck(id, `1st Cousin ${removed_count}x removed`, child_depth));
-    }
-    else if (kinship.slice(4).startsWith('Cousin')) {
-      (rels.children || []).forEach(id => {
-        const child_depth = depth + 1;
-        const removed_count = Math.abs(child_depth);
-        const cousin_count = +kinship[0];
-        if (child_depth === 0) {
-          loopCheck(id, `${getOrdinal(cousin_count+1)} Cousin`, child_depth);
-        } else if (child_depth < 0) {
-          loopCheck(id, `${getOrdinal(cousin_count+1)} Cousin ${removed_count}x removed`, child_depth);
-        } else if (child_depth > 0) {
-          loopCheck(id, `${getOrdinal(cousin_count)} Cousin ${removed_count}x removed`, child_depth);
-        }
-      });
-    }
-    else console.error(`${kinship} not found`);
-  }
-
-
-  function setupHalfKinships(kinships) {
-    const half_kinships = [];
-    Object.keys(kinships).forEach(d_id => {
-      const kinship = kinships[d_id];
-      if (kinship.includes('child')) return
-      if (kinship === 'spouse') return
-      const same_ancestors = findSameAncestor(main_datum.id, d_id, data_stash);
-      if (!same_ancestors) return console.error(`${data_stash.find(d => d.id === d_id).data} not found in main_ancestry`)
-
-      if (same_ancestors.is_half_kin) half_kinships.push(d_id);
-    });
-
-    half_kinships.forEach(d_id => {
-      kinships[d_id] = `Half ${kinships[d_id]}`;
-    });
-  }
-
-  function setupInLawKinships(kinships, data_stash) {
-    Object.keys(kinships).forEach(d_id => {
-      const kinship = kinships[d_id];
-      const datum = data_stash.find(d => d.id === d_id);
-
-      if (kinship === 'spouse') {
-        const siblings = [];
-        if (datum.rels.mother) (getD(datum.rels.mother).rels.children || []).forEach(d_id => siblings.push(d_id));
-        if (datum.rels.father) (getD(datum.rels.father).rels.children || []).forEach(d_id => siblings.push(d_id));
-        siblings.forEach(sibling_id => {if (!kinships[sibling_id]) kinships[sibling_id] = 'sibling-in-law';});  // gender label is added in setupKinshipsGender
-      }
-
-      if (kinship === 'child') {
-        (datum.rels.spouses || []).forEach(spouse_id => {if (!kinships[spouse_id]) kinships[spouse_id] = 'child-in-law';});  // gender label is added in setupKinshipsGender
-      }
-
-      if (kinship === 'uncle') {
-        (datum.rels.spouses || []).forEach(spouse_id => {if (!kinships[spouse_id]) kinships[spouse_id] = 'uncle-in-law';});  // gender label is added in setupKinshipsGender
-      }
-
-      if (kinship.includes('Cousin')) {
-        (datum.rels.spouses || []).forEach(spouse_id => {if (!kinships[spouse_id]) kinships[spouse_id] = `${kinship} in-law`;});  // gender label is added in setupKinshipsGender
-      }
-    });
-  }
-
-  function setupKinshipsGender(kinships) {
-    Object.keys(kinships).forEach(d_id => {
-      const kinship = kinships[d_id];
-      const datum = data_stash.find(d => d.id === d_id);
-      const gender = datum.data.gender;
-      if (kinship.includes('parent')) {
-        const rel_type_general = 'parent';
-        const rel_type = gender === 'M' ? 'father' : gender === 'F' ? 'mother' : rel_type_general;
-        kinships[d_id] = kinships[d_id].replace('parent', rel_type);
-      } else if (kinship.includes('sibling')) {
-        const rel_type_general = 'sibling';
-        const rel_type = gender === 'M' ? 'brother' : gender === 'F' ? 'sister' : rel_type_general;
-        kinships[d_id] = kinships[d_id].replace('sibling', rel_type);
-      } else if (kinship.includes('child')) {
-        const rel_type_general = 'child';
-        const rel_type = gender === 'M' ? 'son' : gender === 'F' ? 'daughter' : rel_type_general;
-        kinships[d_id] = kinships[d_id].replace('child', rel_type);
-      } else if (kinship.includes('uncle')) {
-        const rel_type_general = 'aunt/uncle';
-        const rel_type = gender === 'M' ? 'uncle' : gender === 'F' ? 'aunt' : rel_type_general;
-        kinships[d_id] = kinships[d_id].replace('uncle', rel_type);
-      } else if (kinship.includes('nephew')) {
-        const rel_type_general = 'neice/nephew';
-        const rel_type = gender === 'M' ? 'nephew' : gender === 'F' ? 'niece' : rel_type_general;
-        kinships[d_id] = kinships[d_id].replace('nephew', rel_type);
-      }
-    });
-  }
-
-  function getD(d_id) {
-    return data_stash.find(d => d.id === d_id)
-  }
-}
-
-function findSameAncestor(main_id, rel_id, data_stash) {
-  const main_ancestry = getAncestry(main_id);
-
-  let found;
-  let is_ancestor;
-  let is_half_kin;
-  checkIfRel(rel_id);
-  checkIfSpouse(rel_id);
-  loopCheck(rel_id);
-  if (!found) return null
-  return {found, is_ancestor, is_half_kin}
-  
-  function loopCheck(rel_id) {
-    if (found) return
-    if (rel_id === main_id) {
-      is_ancestor = true;
-      found = rel_id;
-      is_half_kin = false;
-      return
-    }
-    const d = data_stash.find(d => d.id === rel_id);
-    const rels = d.rels;
-    const parents = getParents(rels);
-    const found_parent = main_ancestry.find(p => (p[0] && parents[0] && p[0] === parents[0]) || (p[1] && parents[1] && p[1] === parents[1]));
-    if (found_parent) {
-      found = parents.filter((p, i) => p === found_parent[i]);
-      is_half_kin = checkIfHalfKin(parents, found_parent);
-      return
-    }
-    if (rels.father) loopCheck(rels.father);
-    if (rels.mother) loopCheck(rels.mother);
-  }
-
-  function getAncestry(rel_id) {
-    const ancestry = [];
-    loopAdd(rel_id);
-    return ancestry
-  
-    function loopAdd(rel_id) {
-      const d = data_stash.find(d => d.id === rel_id);
-      const rels = d.rels;
-      ancestry.push(getParents(rels));
-      if (rels.father) loopAdd(rels.father);
-      if (rels.mother) loopAdd(rels.mother);
-    }
-  }
-  
-  function getParents(rels) {
-    return [rels.father, rels.mother]
-  }
-
-  function checkIfRel(rel_id) {
-    const d = data_stash.find(d => d.id === rel_id);
-    const found_parent = main_ancestry.find(p => p[0] === d.id || p[1] === d.id);
-    if (found_parent) {
-      is_ancestor = true;
-      found = rel_id;
-      is_half_kin = false;
-    }
-  }
-
-  function checkIfSpouse(rel_id) {
-    const main_datum = data_stash.find(d => d.id === main_id);
-    if ((main_datum.rels.spouses || []).includes(rel_id)) {
-      found = [main_id, rel_id];
-    }
-  }
-
-
-  function checkIfHalfKin(ancestors1, ancestors2) {
-    return ancestors1[0] !== ancestors2[0] || ancestors1[1] !== ancestors2[1]
-  }
-}
-
-function getKinshipsDataStash(main_id, rel_id, data_stash, kinships) {
-  let in_law_id;
-  const kinship = kinships[rel_id].toLowerCase();
-  if (kinship.includes('in-law')) {
-    in_law_id = rel_id;
-    const datum = data_stash.find(d => d.id === in_law_id);
-    if (kinship.includes('sister') || kinship.includes('brother')) {
-      rel_id = main_id;
-    } else {
-      rel_id = datum.rels.spouses.find(d_id => kinships[d_id] && !kinships[d_id].includes('in-law'));
-    }
-  }
-
-  const same_ancestors = findSameAncestor(main_id, rel_id, data_stash);
-  if (!same_ancestors) return console.error(`${rel_id} not found in main_ancestry`)
-
-  const same_ancestor_id = same_ancestors.is_ancestor ? same_ancestors.found : same_ancestors.found[0];
-  const same_ancestor = data_stash.find(d => d.id === same_ancestor_id);
-  
-  const root = d3.hierarchy(same_ancestor, hierarchyGetterChildren);
-  const same_ancestor_progeny = root.descendants().map(d => d.data.id);
-  const main_ancestry = getCleanAncestry(main_id, same_ancestor_progeny);
-  const rel_ancestry = getCleanAncestry(rel_id, same_ancestor_progeny);
-
-  loopClean(root);
-  const kinship_data_stash = root.descendants().map(d => {
-    const datum = {
-      id: d.data.id,
-      data: JSON.parse(JSON.stringify(d.data.data)),
-      kinship: kinships[d.data.id],
-      rels: {}
-    };
-    if (d.children && d.children.length > 0) datum.rels.children = d.children.map(c => c.data.id);
-    return datum
-  });
-
-  if (kinship_data_stash.length > 0 && !same_ancestors.is_ancestor && !same_ancestors.is_half_kin) addRootSpouse(kinship_data_stash);
-  if (in_law_id) addInLawConnection(kinship_data_stash);
-
-  return kinship_data_stash
-
-  
-  function loopClean(tree_datum) {
-    tree_datum.children = (tree_datum.children || []).filter(child => {
-      if (main_ancestry.includes(child.data.id)) return true
-      if (rel_ancestry.includes(child.data.id)) return true
-      return false
-    });
-    tree_datum.children.forEach(child => loopClean(child));
-    if (tree_datum.children.length === 0) delete tree_datum.children;
-  }
-
-  function hierarchyGetterChildren(d) {
-    const children = [...(d.rels.children || [])].map(id => data_stash.find(d => d.id === id));
-    return children
-  }
-
-  function getCleanAncestry(d_id, same_ancestor_progeny) {
-    const ancestry = [d_id];
-    loopAdd(d_id);
-    return ancestry
-
-    function loopAdd(d_id) {
-      const d = data_stash.find(d => d.id === d_id);
-      const rels = d.rels;
-      if (same_ancestor_progeny.includes(rels.mother)) {
-        ancestry.push(rels.mother);
-        loopAdd(rels.mother);
-      }
-      if (same_ancestor_progeny.includes(rels.father)) {
-        ancestry.push(rels.father);
-        loopAdd(rels.father);
-      }
-    }
-  }
-
-  function addRootSpouse(kinship_data_stash) {
-    const datum = kinship_data_stash[0];
-    const spouse_id = same_ancestor_id === same_ancestors.found[0] ? same_ancestors.found[1] : same_ancestors.found[0];
-    datum.rels.spouses = [spouse_id];
-    const spouse = data_stash.find(d => d.id === spouse_id);
-    const spouse_datum = {
-      id: spouse.id,
-      data: JSON.parse(JSON.stringify(spouse.data)),
-      kinship: kinships[spouse.id],
-      rels: {
-        spouses: [datum.id],
-        children: datum.rels.children
-      }
-    };
-    kinship_data_stash.push(spouse_datum);
-
-    (datum.rels.children || []).forEach(child_id => {
-      const child = data_stash.find(d => d.id === child_id);
-      const kinship_child = kinship_data_stash.find(d => d.id === child_id);
-      kinship_child.rels.father = child.rels.father;
-      kinship_child.rels.mother = child.rels.mother;
-    });
-  }
-
-  function addInLawConnection(kinship_data_stash) {
-    if (kinship.includes('sister') || kinship.includes('brother')) {
-      addInLawSibling(kinship_data_stash);
-    } else {
-      addInLawSpouse(kinship_data_stash);
-    }
-  }
-
-  function addInLawSpouse(kinship_data_stash) {
-    const datum = kinship_data_stash.find(d => d.id === rel_id);
-    const spouse_id = in_law_id;
-    datum.rels.spouses = [spouse_id];
-
-    const spouse = data_stash.find(d => d.id === spouse_id);
-    const spouse_datum = {
-      id: spouse.id,
-      data: JSON.parse(JSON.stringify(spouse.data)),
-      kinship: kinships[spouse.id],
-      rels: {
-        spouses: [datum.id],
-        children: []
-      }
-    };
-    kinship_data_stash.push(spouse_datum);
-  }
-
-  function addInLawSibling(kinship_data_stash) {
-    const datum = kinship_data_stash.find(d => d.id === rel_id);
-    const in_law_datum = getD(in_law_id);
-
-    kinship_data_stash.push({
-      id: in_law_id,
-      data: JSON.parse(JSON.stringify(in_law_datum.data)),
-      kinship: kinships[in_law_id],
-      rels: {
-        spouses: [],
-        children: []
-      }
-    });
-
-    const siblings = [];
-    if (in_law_datum.rels.mother) (getD(in_law_datum.rels.mother).rels.children || []).forEach(d_id => siblings.push(d_id));
-    if (in_law_datum.rels.father) (getD(in_law_datum.rels.father).rels.children || []).forEach(d_id => siblings.push(d_id));
-    
-    const spouse_id = getD(rel_id).rels.spouses.find(d_id => siblings.includes(d_id));
-    datum.rels.spouses = [spouse_id];
-    const spouse = getD(spouse_id);
-    const spouse_datum = {
-      id: spouse.id,
-      data: JSON.parse(JSON.stringify(spouse.data)),
-      kinship: kinships[spouse.id],
-      rels: {
-        spouses: [datum.id],
-        children: []
-      }
-    };
-    kinship_data_stash.push(spouse_datum);
-
-    if (in_law_datum.rels.father) {
-      const father_id = in_law_datum.rels.father;
-      const father = getD(father_id);
-      const father_datum = {
-        id: father.id,
-        data: JSON.parse(JSON.stringify(father.data)),
-        kinship: 'Father-in-law',
-        rels: {
-          spouses: [],
-          children: [spouse_id, in_law_id]
-        }
-      };
-      if (in_law_datum.rels.mother) {father_datum.rels.spouses.push(in_law_datum.rels.mother);}
-      kinship_data_stash.unshift(father_datum);
-    }
-    if (in_law_datum.rels.mother) {
-      const mother_id = in_law_datum.rels.mother;
-      const mother = getD(mother_id);
-      const mother_datum = {
-        id: mother.id,
-        data: JSON.parse(JSON.stringify(mother.data)),
-        kinship: 'Mother-in-law',
-        rels: {
-          spouses: [],
-          children: [spouse_id, in_law_id]
-        }
-      };
-      if (in_law_datum.rels.father) {mother_datum.rels.spouses.push(in_law_datum.rels.father);}
-      kinship_data_stash.unshift(mother_datum);
-    }
-  }
-
-  function getD(d_id) {
-    return data_stash.find(d => d.id === d_id)
-  } 
-}
-
-function getOrdinal(n) {
-  const s = ['st','nd','rd'];
-  return s[n-1] ? n+s[n-1] : n+'th'
-}
-
-function getGreatCount(depth) {
-  const depth_abs = Math.abs(depth);
-  return depth_abs - 2
-}
-
-function getGreatKinship(kinship, depth) {
-  const great_count = getGreatCount(depth);
-  if (kinship.includes('great-')) kinship = kinship.split('great-')[1];
-  if (great_count === 1) {
-    return `great-${kinship}`
-  } else if (great_count > 1) {
-    return `${great_count}x-great-${kinship}`;
-  } else {
-    console.error(`${kinship} should have great_count > 1`);
-    return kinship
-  }
-}
-
-function kinshipInfo(kinship_info_config, rel_id, data_stash) {
-  const {self_id, getLabel, title} = kinship_info_config;
-  const relationships = calculateKinships(self_id, data_stash, kinship_info_config);
-  const relationship = relationships[rel_id];
-  if (!relationship) return
-  let label = relationship;
-  if (relationship === 'self') label = 'You';
-  else label = capitalizeLabel(label);
-  const html = (`
-    <div class="f3-kinship-info">
-      <div class="f3-info-field">
-        <span class="f3-info-field-label">${title}</span>
-        <span class="f3-info-field-value">
-          <span>${label}</span>
-          <span class="f3-kinship-info-icon">${infoSvgIcon()}</span>
-        </span>
-      </div>
-    </div>
-  `);
-  const kinship_info_node = d3.create('div').html(html).select('div').node();
-  let popup;
-  d3.select(kinship_info_node).select('.f3-kinship-info-icon').on('click', (e) => createPopup(e, kinship_info_node));
-  return kinship_info_node
-
-  function createPopup(e, cont) {
-    const width = 250;
-    const height = 400;
-    let left = e.clientX - width - 10;
-    let top = e.clientY - height - 10;
-    if (left + width > window.innerWidth) {
-      left = window.innerWidth - width - 10;
-    }
-    if (top < 0) {
-      top = 10;
-    }
-    if (popup && popup.active) {
-      popup.close();
-      popup = null;
-      return
-    }
-    
-    popup = f3.elements.infoPopup(cont);
-    d3.select(popup.popup_cont)
-      .style('width', `${width}px`)
-      .style('height', `${height}px`)
-      .style('left', `${left}px`)
-      .style('top', `${top}px`);
-
-    const inner_cont = popup.popup_cont.querySelector('.f3-popup-content-inner');
- 
-    popup.activate();
-    createSmallTree(self_id, rel_id, data_stash, relationships, inner_cont, getLabel);
-  }
-}
-
-function createSmallTree(self_id, rel_id, data_stash, relationships, parent_cont, getLabel) {
-  if (!d3.select(parent_cont).select('#SmallChart').node()) {
-    d3.select(parent_cont).append('div').attr('id', 'SmallChart').attr('class', 'f3');
-  }
-  const small_chart = d3.select('#SmallChart');
-  small_chart.selectAll('*').remove();
-  const small_chart_data = getKinshipsDataStash(self_id, rel_id, data_stash, relationships);
-
-  let kinship_label_toggle = true;
-  const kinship_label_toggle_cont = small_chart.append('div');
-
-  create(small_chart_data);
-
-  function create(data) {
-    const f3Chart = f3.createChart('#SmallChart', data)
-      .setTransitionTime(500)
-      .setCardXSpacing(170)
-      .setCardYSpacing(70)
-      .setSingleParentEmptyCard(false);
-  
-    const f3Card = f3Chart.setCard(f3.CardHtml)
-      .setStyle('rect')
-      .setCardInnerHtmlCreator(d => {
-        return getCardInnerRect(d)
-      })
-      .setOnCardUpdate(function(d) {
-        const card = d3.select(this).select('.card');
-        card.classed('card-main', false);
-      });
-
-    f3Card.onCardClick = ((e, d) => {});
-  
-    f3Chart.updateTree({initial: true});
-
-    setTimeout(() => setupSameZoom(0.65), 100);
-
-    createKinshipLabelToggle();
-
-    function getCardInnerRect(d) {
-      let label = d.data.kinship === 'self' ? 'You' : d.data.kinship;
-      label = capitalizeLabel(label);
-      if (!kinship_label_toggle) label = getLabel(d.data);
-      
-      return (`
-        <div class="card-inner card-rect ${getCardClass()}">
-          <div class="card-label">${label}</div>
-        </div>
-      `)
-
-      function getCardClass() {
-        if (d.data.kinship === 'self') {
-          return 'card-kinship-self' + (kinship_label_toggle ? '' : ' f3-real-label')
-        } else if (d.data.id === rel_id) {
-          return 'card-kinship-rel'
-        } else {
-          return 'card-kinship-default'
-        }
-      }
-    }
-
-    function createKinshipLabelToggle() {
-      kinship_label_toggle_cont
-        .classed('f3-kinship-labels-toggle', true);
-
-      kinship_label_toggle_cont.append('label')
-        .text('Kinship labels')
-        .append('input')
-          .attr('type', 'checkbox')
-          .attr('checked', true)
-          .on('change', (e) => {
-            kinship_label_toggle = !kinship_label_toggle;
-            f3Chart.updateTree({initial: false, tree_position: 'inherit'});
-          });
-    }
-
-    function setupSameZoom(zoom_level) {
-      const svg = f3Chart.cont.querySelector('svg.main_svg');
-      const current_zoom = f3.handlers.getCurrentZoom(svg);
-      if (current_zoom.k > zoom_level) {
-        f3.handlers.zoomTo(svg, zoom_level);
-      }
-    }
-  }
-}
-
-function capitalizeLabel(label) {
-  label = label[0].toUpperCase() + label.slice(1);
-  if (label.includes('great-')) label = label.replace('great-', 'Great-');
-  return label
-}
-
-function editTree(...args) { return new EditTree(...args) }
-
-function EditTree(cont, store, honoreeId, authContext) {
-  this.cont = cont;
-  this.store = store;
-  this.honoreeId = honoreeId;
-  this.authContext = authContext;
-
-  this.fields = [
-    {type: 'text', label: 'first name', id: 'first name'},
-    {type: 'text', label: 'last name', id: 'last name'},
-    {type: 'text', label: 'birthday', id: 'birthday'},
-    {type: 'text', label: 'avatar', id: 'avatar'}
-  ];
-
-  this.form_cont = null;
-
-  this.is_fixed = true;
-
-  this.history = null;
-  this.no_edit = false;
-
-  this.onChange = null;
-
-  this.editFirst = false;
-
-  this.postSubmit = null;
-
-  this.link_existing_rel_config = null;
-
-  this.onFormCreation = null;
-
-  this.kinship_info_config = null;
-
-  this.init();
-
-  return this
-}
-
-EditTree.prototype.init = function() {
-  this.form_cont = d3.select(this.cont).append('div').classed('f3-form-cont', true).node();
-  this.modal = this.setupModal();
-  this.addRelativeInstance = this.setupAddRelative();
-  this.removeRelativeInstance = this.setupRemoveRelative();
-  this.createHistory();
-};
-
-EditTree.prototype.open = function(datum) {
-  if (datum.data.data && typeof datum.data.data === 'object') datum = datum.data;
-  const tree_datum = this.store.getTreeDatum(datum.id);
-  if (this.addRelativeInstance.is_active) handleAddRelative.call(this, datum);
-  else if (this.removeRelativeInstance.is_active) handleRemoveRelative.call(this, tree_datum);
-  else {
-    this.cardEditForm(datum);
-  }
-
-  function handleAddRelative() {
-    if (datum._new_rel_data) {
-      this.cardEditForm(datum);
-    } else {
-      this.addRelativeInstance.onCancel();
-      this.cardEditForm(datum);
-      this.store.updateMainId(datum.id);
-      this.store.updateTree({});
-    }
-  }
-
-  function handleRemoveRelative() {
-    if (datum.id === this.removeRelativeInstance.datum.id) {
-      this.removeRelativeInstance.onCancel();
-      this.cardEditForm(datum);
-    } else {
-      this.removeRelativeInstance.onChange(tree_datum, onAccept.bind(this));
-
-      function onAccept() {
-        this.removeRelativeInstance.onCancel();
-        this.updateHistory();
-        this.store.updateTree({});
-      }
-    }
-  }
-};
-
-EditTree.prototype.openWithoutRelCancel = function(datum) {
-  this.cardEditForm(datum);
-};
-
-EditTree.prototype.cardEditForm = function(datum) {
-  const props = {};
-  const is_new_rel = datum?._new_rel_data;
-  if (is_new_rel) {
-    props.onCancel = () => this.addRelativeInstance.onCancel();
-  } else {
-    props.addRelative = this.addRelativeInstance;
-    props.removeRelative = this.removeRelativeInstance;
-    props.deletePerson = () => {
-      deletePerson(datum, this.store.getData());
-      this.openFormWithId(this.store.getLastAvailableMainDatum().id);
-
-      this.store.updateTree({});
-    };
-  }
-
-  const form_creator = f3.handlers.createForm({
-    store: this.store, 
-    datum, 
-    postSubmit: postSubmit.bind(this),
-    fields: this.fields, 
-    addRelative: null,
-    onCancel: () => {},
-    editFirst: this.editFirst,
-    link_existing_rel_config: this.link_existing_rel_config,
-    getKinshipInfo: this.kinship_info_config ? () => kinshipInfo(this.kinship_info_config, datum.id, this.store.getData()) : null,
-    onFormCreation: this.onFormCreation,
-    honoreeId: this.honoreeId,
-    authContext: this.authContext,
-    ...props
-  });
-
-  form_creator.no_edit = this.no_edit;
-  if (this.no_edit) form_creator.editable = false;
-  const form_cont = f3.handlers.formInfoSetup(form_creator, this.closeForm.bind(this));
-
-  this.form_cont.innerHTML = '';
-  this.form_cont.appendChild(form_cont);
-
-  this.openForm();
-
-  function postSubmit(props) {
-    if (this.addRelativeInstance.is_active) {
-      this.addRelativeInstance.onChange(datum, props);
-      if (this.postSubmit) this.postSubmit(datum, this.store.getData());
-      const active_datum = this.addRelativeInstance.datum;
-      this.store.updateMainId(active_datum.id);
-      this.openWithoutRelCancel(active_datum);
-    } else if ((datum.to_add || datum.unknown) && props?.link_rel_id) {
-      handleLinkRel(datum, props.link_rel_id, this.store.getData());
-      this.store.updateMainId(props.link_rel_id);
-      this.openFormWithId(props.link_rel_id);
-    } else if (!props?.delete) {
-      if (this.postSubmit) this.postSubmit(datum, this.store.getData());
-      this.openFormWithId(datum.id);
-    }
-
-    if (!this.is_fixed) this.closeForm();
-    
-    this.store.updateTree({});
-
-    this.updateHistory();
-  }
-};
-
-EditTree.prototype.openForm = function() {
-  d3.select(this.form_cont).classed('opened', true);
-};
-
-EditTree.prototype.closeForm = function() {
-  d3.select(this.form_cont).classed('opened', false).html('');
-  this.store.updateTree({});
-};
-
-EditTree.prototype.fixed = function() {
-  this.is_fixed = true;
-  d3.select(this.form_cont).style('position', 'relative');
-
-  return this
-};
-
-EditTree.prototype.absolute = function() {
-  this.is_fixed = false;
-  d3.select(this.form_cont).style('position', 'absolute');
-
-  return this
-};
-
-EditTree.prototype.setCardClickOpen = function(card) {
-  card.setOnCardClick((e, d) => {
-    if (this.isAddingRelative()) {
-      this.open(d.data);
-    } else if (this.isRemovingRelative()) {
-      this.open(d.data);
-    } else {
-      this.open(d.data);
-      card.onCardClickDefault(e, d);
-    }
-  });
-
-  return this
-};
-
-EditTree.prototype.openFormWithId = function(d_id) {
-  if (d_id) {
-    const d = this.store.getDatum(d_id);
-    this.openWithoutRelCancel(d);
-  } else {
-    const d = this.store.getMainDatum();
-    this.openWithoutRelCancel(d);
-  }
-};
-
-EditTree.prototype.createHistory = function() {
-  this.history = f3.handlers.createHistory(this.store, this.getStoreDataCopy.bind(this), historyUpdateTree.bind(this));
-  this.history.controls = f3.handlers.createHistoryControls(this.cont.querySelector('.f3-nav-cont'), this.history);
-  this.history.changed();
-  this.history.controls.updateButtons();
-
-  return this
-
-  function historyUpdateTree() {
-    if (this.addRelativeInstance.is_active) this.addRelativeInstance.onCancel();
-    if (this.removeRelativeInstance.is_active) this.removeRelativeInstance.onCancel();
-    this.store.updateTree({initial: false});
-    this.history.controls.updateButtons();
-    this.openFormWithId(this.store.getMainDatum()?.id);
-    if (this.onChange) this.onChange();
-  }
-};
-
-EditTree.prototype.setNoEdit = function() {
-  this.no_edit = true;
-
-  return this
-};
-
-EditTree.prototype.setEdit = function() {
-  this.no_edit = false;
-
-  return this
-};
-
-EditTree.prototype.setFields = function(fields) {
-  const new_fields = [];
-  if (!Array.isArray(fields)) {
-    console.error('fields must be an array');
-    return this
-  }
-  for (const field of fields) {
-    if (typeof field === 'string') {
-      new_fields.push({type: 'text', label: field, id: field});
-    } else if (typeof field === 'object') {
-      if (!field.id) {
-        console.error('fields must be an array of objects with id property');
-      } else {
-        new_fields.push(field);
-      }
-    } else {
-      console.error('fields must be an array of strings or objects');
-    }
-  }
-  this.fields = new_fields;
-
-  return this
-};
-
-EditTree.prototype.setOnChange = function(fn) {
-  this.onChange = fn;
-
-  return this
-};
-
-EditTree.prototype.addRelative = function(datum) {
-  if (!datum) datum = this.store.getMainDatum();
-  this.addRelativeInstance.activate(datum);
-
-  return this
-
-};
-
-EditTree.prototype.setupAddRelative = function() {
-  return addRelative(this.store, onActivate.bind(this), cancelCallback.bind(this))
-
-  function onActivate() {
-    if (this.removeRelativeInstance.is_active) this.removeRelativeInstance.onCancel();
-  }
-
-  function cancelCallback(datum) {
-    this.store.updateMainId(datum.id);
-    this.store.updateTree({});
-    this.openFormWithId(datum.id);
-  }
-};
-
-EditTree.prototype.setupRemoveRelative = function() {
-  return removeRelative(this.store, onActivate.bind(this), cancelCallback.bind(this), this.modal)
-
-  function onActivate() {
-    if (this.addRelativeInstance.is_active) this.addRelativeInstance.onCancel();
-    setClass(this.cont, true);
-  }
-
-  function cancelCallback(datum) {
-    setClass(this.cont, false);
-    this.store.updateMainId(datum.id);
-    this.store.updateTree({});
-    this.openFormWithId(datum.id);
-  }
-
-  function setClass(cont, add) {
-    d3.select(cont).select('#f3Canvas').classed('f3-remove-relative-active', add);
-  }
-};
-
-EditTree.prototype.setupModal = function() {
-  return modal(this.cont)
-};
-
-EditTree.prototype.setEditFirst = function(editFirst) {
-  this.editFirst = editFirst;
-
-  return this
-};
-
-EditTree.prototype.isAddingRelative = function() {
-  return this.addRelativeInstance.is_active
-};
-
-EditTree.prototype.isRemovingRelative = function() {
-  return this.removeRelativeInstance.is_active
-};
-
-EditTree.prototype.setAddRelLabels = function(add_rel_labels) {
-  this.addRelativeInstance.setAddRelLabels(add_rel_labels);
-  return this
-};
-
-EditTree.prototype.setLinkExistingRelConfig = function(link_existing_rel_config) {
-  this.link_existing_rel_config = link_existing_rel_config;
-  return this
-};
-
-EditTree.prototype.setOnFormCreation = function(onFormCreation) {
-  this.onFormCreation = onFormCreation;
-
-  return this
-};
-
-EditTree.prototype.setKinshipInfo = function(kinship_info_config) {
-  this.kinship_info_config = kinship_info_config;
-
-  return this
-};
-
-EditTree.prototype.getStoreDataCopy = function() {  // todo: should make more sense
-  let data = JSON.parse(JSON.stringify(this.store.getData()));  // important to make a deep copy of the data
-  if (this.addRelativeInstance.is_active) data = this.addRelativeInstance.cleanUp(data);    
-  data = f3.handlers.cleanupDataJson(data);
-  return data
-};
-
-EditTree.prototype.getDataJson = function() {
-  return JSON.stringify(this.getStoreDataCopy(), null, 2)
-};
-
-EditTree.prototype.updateHistory = function() {
-  if (this.history) {
-    this.history.changed();
-    this.history.controls.updateButtons();
-  }
-
-  if (this.onChange) this.onChange();
-};
-
-EditTree.prototype.setPostSubmit = function(postSubmit) {
-  this.postSubmit = postSubmit;
-
-  return this
-};
-
-EditTree.prototype.destroy = function() {
-  this.history.controls.destroy();
-  this.history = null;
-  d3.select(this.cont).select('.f3-form-cont').remove();
-  if (this.addRelativeInstance.onCancel) this.addRelativeInstance.onCancel();
-  this.store.updateTree({});
-
-  return this
-};
-
-function linkSpouseText(svg, tree, props={}) {
-  const links_data = [];
-  tree.data.forEach(d => {
-    if (d._spouse && d.data.data.gender === 'F') links_data.push({nodes: [d, d._spouse], id: `${d.data.id}--${d._spouse.data.id}`});
-    if (d.spouses) d.spouses.forEach(sp => links_data.push({nodes: [sp, d], id: `${sp.data.id}--${d.data.id}`}));
-  });
-
-  const link = d3.select(svg).select(".links_view").selectAll("g.link-text").data(links_data, d => d.id);
-  const link_exit = link.exit();
-  const link_enter = link.enter().append("g").attr("class", "link-text");
-  const link_update = link_enter.merge(link);
-  const spouseLineX = (sp1, sp2) => {
-    if (sp1.spouse && sp1.data.data.gender === 'F') return sp1.x - props.node_separation/2
-    else if (sp2.spouse && sp2.data.data.gender === 'M') return sp2.x + props.node_separation/2
-    else return Math.min(sp1.x, sp2.x) + props.node_separation/2
-  };
-
-  link_exit.each(linkExit);
-  link_enter.each(linkEnter);
-  link_update.each(linkUpdate);
-
-  function linkEnter(d) {
-    const [sp1, sp2] = d.nodes;
-    const text_g = d3.select(this);
-    text_g
-      .attr('transform', `translate(${spouseLineX(sp1, sp2)}, ${sp1.y-3})`)
-      .style('opacity', 0);
-
-    text_g.append("text").style('font-size', '12px').style('fill', '#fff').style('text-anchor', 'middle');
-  }
-
-  function linkUpdate(d) {
-    const [sp1, sp2] = d.nodes;
-    const text_g = d3.select(this);
-    const delay = props.initial ? calculateDelay(tree, sp1, props.transition_time) : 0;
-    text_g.select('text').text(props.linkSpouseText(sp1, sp2));
-    text_g.transition('text').duration(props.transition_time).delay(delay)
-    .attr('transform', `translate(${spouseLineX(sp1, sp2)}, ${sp1.y-3})`);
-    text_g.transition('text-op').duration(100).delay(delay + props.transition_time).style('opacity', 1);
-  }
-
-  function linkExit(d) {
-    const text_g = d3.select(this);
-    text_g.transition('text').duration(100).style('opacity', 0)
-      .on("end", () => text_g.remove());
-  }
-
-}
-
-function autocomplete(...args) { return new Autocomplete(...args) }
-
-function Autocomplete(cont, onSelect) {
-  this.cont = cont;
-  this.autocomplete_cont = null;
-  this.options = [];
-  this.onSelect = onSelect;
-
-  this.init();
-}
-
-Autocomplete.prototype.init = function() {
-  this.autocomplete_cont = d3.select(this.cont).append('div').attr('class', 'f3-autocomplete-cont').node();
-  d3.select(this.autocomplete_cont);
-  this.create();
-};
-
-Autocomplete.prototype.create = function() {
-  const self = this;
-  d3.select(this.autocomplete_cont).html(`
-    <div class="f3-autocomplete">
-      <div class="f3-autocomplete-input-cont">
-        <input type="text" placeholder="Search">
-        <span class="f3-autocomplete-toggle">${chevronDownSvgIcon()}</span>
-      </div>
-      <div class="f3-autocomplete-items" tabindex="0"></div>
-    </div>
-  `);
-
-  const search_cont = d3.select(this.autocomplete_cont).select(".f3-autocomplete");
-  const search_input = search_cont.select("input");
-  const dropdown = search_cont.select(".f3-autocomplete-items");
-
-  search_cont.on("focusout", () => {
-      setTimeout(() => {
-        if (!search_cont.node().contains(document.activeElement)) {
-          closeDropdown();
-        }
-      }, 200);
-    });
-
-  search_input
-    .on("focus", () => {
-      updateOptions();
-      activateDropdown();
-    })
-    .on("input", activateDropdown)
-    .on("keydown", handleArrowKeys);
-
-  dropdown.on("wheel", e => e.stopPropagation());
-
-  search_cont.select(".f3-autocomplete-toggle")
-    .on("click", (e) => {
-      e.stopPropagation();
-      const is_active = search_cont.classed("active");
-      search_cont.classed("active", !is_active);
-      if (is_active) {
-        closeDropdown();
-      } else {
-        search_input.node().focus();
-        activateDropdown();
-      }
-    });
-
-  function activateDropdown() {
-    search_cont.classed("active", true);
-    const search_input_value = search_input.property("value");
-    const filtered_options = self.options.filter(d => d.label.toLowerCase().includes(search_input_value.toLowerCase()));
-    filtered_options.forEach(setHtmlLabel);
-    filtered_options.sort(sortByLabel);
-    updateDropdown(filtered_options);
-
-    function setHtmlLabel(d) {
-      const index = d.label.toLowerCase().indexOf(search_input_value.toLowerCase());
-      if (index !== -1) d.label_html = itemLabel();
-      else d.label_html = d.label;
-
-      function itemLabel() {
-        return d.label.substring(0, index) 
-          + '<strong>' + d.label.substring(index, index + search_input_value.length) 
-          + '</strong>' + d.label.substring(index + search_input_value.length)
-      }
-    }
-
-    function sortByLabel(a, b) {
-      if (a.label < b.label) return -1
-      else if (a.label > b.label) return 1
-      else return 0
-    }
-  }
-
-  function closeDropdown() {
-    search_cont.classed("active", false);
-    updateDropdown([]);
-  }
-
-  function updateDropdown(filtered_options) {
-    dropdown.selectAll("div.f3-autocomplete-item")
-      .data(filtered_options, d => d?.value).join("div")
-      .attr("class", "f3-autocomplete-item")
-      .on("click", (e, d) => {
-        self.onSelect(d.value);
-      })
-      .html(d => d.optionHtml ? d.optionHtml(d) : itemHtml(d));
-
-
-    function itemHtml(d) {
-      return `<div class="${d.class ? d.class : ''}">${d.label_html}</div>`
-    }
-  }
-
-  function updateOptions() {
-    self.options = self.getOptions();
-  }
-
-  function handleArrowKeys(e) {
-    const items = dropdown.selectAll("div.f3-autocomplete-item").nodes();
-    const currentIndex = items.findIndex(item => d3.select(item).classed("f3-selected"));
-    
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-      selectItem(items, nextIndex);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-      selectItem(items, prevIndex);
-    } else if (e.key === "Enter" && currentIndex !== -1) {
-      e.preventDefault();
-      const d = d3.select(items[currentIndex]).datum();
-      if (d) {
-        self.onSelect(d.value);
-      }
-    }
-
-    function selectItem(items, index) {
-      items.forEach(item => d3.select(item).classed("f3-selected", false));
-      if (items[index]) {
-        d3.select(items[index]).classed("f3-selected", true);
-        items[index].scrollIntoView({ block: "nearest" });
-      }
-    }
-  }
-};
-
-Autocomplete.prototype.setOptionsGetter = function(getOptions) {
-  this.getOptions = getOptions;
-  return this
-};
-
-Autocomplete.prototype.setOptionsGetterPerson = function(getData, getLabel) {
-  this.getOptions = () => {
-    const options = [];
-    const data = getData();
-    data.forEach(d => {
-      if (d.to_add || d.unknown || d._new_rel_data) return
-      if (options.find(d0 => d0.value === d.id)) return
-      options.push({
-        label: getLabel(d),
-        value: d.id,
-        optionHtml: optionHtml(d)
-      });
-    });
-    return options
-  };
-  return this
-
-  function optionHtml(d) {
-    const link_off = !checkIfConnectedToFirstPerson(d, getData());
-    return option => (`
-      <div>
-        <span style="float: left; width: 10px; height: 10px; margin-right: 10px;" class="f3-${getPersonGender(d)}-color">${personSvgIcon()}</span>
-        <span>${option.label_html}</span>
-        ${link_off ? `<span style="float: right; width: 10px; height: 10px; margin-left: 5px;" title="This profile is not connected to the main profile">${linkOffSvgIcon()}</span>` : ''}
-      </div>
-    `)
-  }
-
-  function getPersonGender(d) {
-    if (d.data.gender === "M") return "male"
-    else if (d.data.gender === "F") return "female"
-    else return "genderless"
-  }
-};
-
-Autocomplete.prototype.destroy = function() {
-  this.autocomplete_cont.remove();
-};
-
-function createChart(cont, data, honoreeId, authContext) { return new CreateChart(cont, data, honoreeId, authContext) }
-
-function CreateChart(cont, data, honoreeId, authContext) {
   this.cont = null;
   this.store = null;
   this.svg = null;
   this.getCard = null;
-  this.node_separation = 250;
-  this.level_separation = 150;
-  this.is_horizontal = false;
-  this.single_parent_empty_card = true;
-  this.transition_time = 2000;
-  this.linkSpouseText = false;
-  this.personSearch = null;
-
-  this.is_card_html = false;
-
-  this.beforeUpdate = null;
-  this.afterUpdate = null;
-
+  this.node_separation = node_separation;
+  this.level_separation = level_separation;
+  this.is_horizontal = is_horizontal;
+  this.single_parent_empty_card = single_parent_empty_card;
+  this.transition_time = transition_time;
+  this.linkSpouseText = linkSpouseText;
+  this.personSearch = personSearch;
+  this.is_card_html = is_card_html;
+  this.beforeUpdate = beforeUpdate;
+  this.afterUpdate = afterUpdate;
   this.honoreeId = honoreeId;
   this.authContext = authContext;
 
   this.init(cont, data);
 
-  return this
+  return this;
 }
 
 CreateChart.prototype.init = function(cont, data) {
@@ -5348,7 +3644,7 @@ CreateChart.prototype.setDuplicateBranchToggle = function(duplicate_branch_toggl
 };
 
 CreateChart.prototype.editTree = function() {
-  return this.editTreeInstance = editTree(this.cont, this.store, this.honoreeId, this.authContext)
+  return this.editTreeInstance = editTree(this.cont, this.store, this.honoreeId, this.authContext);
 };
 
 CreateChart.prototype.updateMain = function(d) {
@@ -5453,7 +3749,7 @@ function CardSvg$1(cont, store) {
 CardSvg$1.prototype.init = function() {
   this.svg = this.cont.querySelector('svg.main_svg');
 
-  this.getCard = () => f3.elements.CardSvg({
+  this.getCard = () => f3$1.elements.CardSvg({
     store: this.store,
     svg: this.svg,
     card_dim: this.card_dim,
@@ -5549,7 +3845,7 @@ function CardHtml$1(cont, store) {
 CardHtml$1.prototype.init = function() {
   this.svg = this.cont.querySelector('svg.main_svg');
 
-  this.getCard = () => f3.elements.CardHtml({
+  this.getCard = () => f3$1.elements.CardHtml({
     store: this.store,
     card_display: this.card_display,
     cardImageField: this.cardImageField,
@@ -5658,20 +3954,20 @@ CardHtml$1.prototype.unsetOnHoverPathToMain = function() {
 CardHtml$1.prototype.onEnterPathToMain = function(e, datum) {
   this.to_transition = datum.data.id;
   const main_datum = this.store.getTreeMainDatum();
-  const cards = d3.select(this.cont).select('div.cards_view').selectAll('.card_cont');
-  const links = d3.select(this.cont).select('svg.main_svg .links_view').selectAll('.link');
+  const cards = d3$1.select(this.cont).select('div.cards_view').selectAll('.card_cont');
+  const links = d3$1.select(this.cont).select('svg.main_svg .links_view').selectAll('.link');
   const [cards_node_to_main, links_node_to_main] = pathToMain(cards, links, datum, main_datum);
   cards_node_to_main.forEach(d => {
     const delay = Math.abs(datum.depth - d.card.depth) * 200;
-    d3.select(d.node.querySelector('div.card-inner'))
+    d3$1.select(d.node.querySelector('div.card-inner'))
       .transition().duration(0).delay(delay)
-      .on('end', () => this.to_transition === datum.data.id && d3.select(d.node.querySelector('div.card-inner')).classed('f3-path-to-main', true));
+      .on('end', () => this.to_transition === datum.data.id && d3$1.select(d.node.querySelector('div.card-inner')).classed('f3-path-to-main', true));
   });
   links_node_to_main.forEach(d => {
     const delay = Math.abs(datum.depth - d.link.depth) * 200;
-    d3.select(d.node)
+    d3$1.select(d.node)
       .transition().duration(0).delay(delay)
-      .on('end', () => this.to_transition === datum.data.id && d3.select(d.node).classed('f3-path-to-main', true));
+      .on('end', () => this.to_transition === datum.data.id && d3$1.select(d.node).classed('f3-path-to-main', true));
   });
 
   return this
@@ -5679,13 +3975,13 @@ CardHtml$1.prototype.onEnterPathToMain = function(e, datum) {
 
 CardHtml$1.prototype.onLeavePathToMain = function(e, d) {
   this.to_transition = false;
-  d3.select(this.cont).select('div.cards_view').selectAll('div.card-inner').classed('f3-path-to-main', false);
-  d3.select(this.cont).select('svg.main_svg .links_view').selectAll('.link').classed('f3-path-to-main', false);
+  d3$1.select(this.cont).select('div.cards_view').selectAll('div.card-inner').classed('f3-path-to-main', false);
+  d3$1.select(this.cont).select('svg.main_svg .links_view').selectAll('.link').classed('f3-path-to-main', false);
 
   return this
 };
 
-var f3 = {
+var f3$1 = {
   CalculateTree,
   createStore,
   view,
@@ -5700,4 +3996,4 @@ var f3 = {
   CardHtml: CardHtmlWrapper,
 };
 
-export default f3;
+export default f3$1;
