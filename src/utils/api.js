@@ -1,7 +1,7 @@
 // Utility functions for API calls to /api/family (MongoDB)
 // All functions now require honoreeId and authContext
 export async function savePersonToDB(person, honoreeId, authContext) {
-  const res = await fetch(`/api/family/${honoreeId}`, {
+  const res = await fetch(`/api/family/${honoreeId}/person`, {
     method: person._isNew ? 'POST' : 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -14,7 +14,7 @@ export async function savePersonToDB(person, honoreeId, authContext) {
 }
 
 export async function deletePersonFromDB(id, honoreeId, authContext) {
-  const res = await fetch(`/api/family/${honoreeId}`, {
+  const res = await fetch(`/api/family/${honoreeId}/person`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',

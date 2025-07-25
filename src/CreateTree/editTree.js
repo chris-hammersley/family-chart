@@ -9,9 +9,11 @@ import { kinshipInfo } from "./kinshipInfo.js"
 
 export default function(...args) { return new EditTree(...args) }
 
-function EditTree(cont, store) {
+function EditTree(cont, store, honoreeId, authContext) {
   this.cont = cont
   this.store = store
+  this.honoreeId = honoreeId
+  this.authContext = authContext
 
   this.fields = [
     {type: 'text', label: 'first name', id: 'first name'},
@@ -119,6 +121,8 @@ EditTree.prototype.cardEditForm = function(datum) {
     link_existing_rel_config: this.link_existing_rel_config,
     getKinshipInfo: this.kinship_info_config ? () => kinshipInfo(this.kinship_info_config, datum.id, this.store.getData()) : null,
     onFormCreation: this.onFormCreation,
+    honoreeId: this.honoreeId,
+    authContext: this.authContext,
     ...props
   })
 

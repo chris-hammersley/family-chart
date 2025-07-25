@@ -6,9 +6,9 @@ import autocomplete from "./CreateTree/autocomplete.js"
 import { getMaxDepth } from "./CalculateTree/CalculateTree.handlers.js"
 import { calculateKinships, getKinshipsDataStash } from "./CalculateTree/CalculateTree.calculateKinships.js"
 
-export default function(...args) { return new CreateChart(...args) }
+export default function(cont, data, honoreeId, authContext) { return new CreateChart(cont, data, honoreeId, authContext) }
 
-function CreateChart(cont, data) {
+function CreateChart(cont, data, honoreeId, authContext) {
   this.cont = null
   this.store = null
   this.svg = null
@@ -25,6 +25,9 @@ function CreateChart(cont, data) {
 
   this.beforeUpdate = null
   this.afterUpdate = null
+
+  this.honoreeId = honoreeId
+  this.authContext = authContext
 
   this.init(cont, data)
 
@@ -208,7 +211,7 @@ CreateChart.prototype.setDuplicateBranchToggle = function(duplicate_branch_toggl
 }
 
 CreateChart.prototype.editTree = function() {
-  return this.editTreeInstance = editTree(this.cont, this.store)
+  return this.editTreeInstance = editTree(this.cont, this.store, this.honoreeId, this.authContext)
 }
 
 CreateChart.prototype.updateMain = function(d) {

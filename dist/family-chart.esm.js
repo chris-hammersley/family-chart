@@ -380,7 +380,7 @@ function getLinkRelOptions(datum, data) {
 // Utility functions for API calls to /api/family (MongoDB)
 // All functions now require honoreeId and authContext
 async function savePersonToDB(person, honoreeId, authContext) {
-  const res = await fetch(`/api/family/${honoreeId}`, {
+  const res = await fetch(`/api/family/${honoreeId}/person`, {
     method: person._isNew ? 'POST' : 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -393,7 +393,7 @@ async function savePersonToDB(person, honoreeId, authContext) {
 }
 
 async function deletePersonFromDB(id, honoreeId, authContext) {
-  const res = await fetch(`/api/family/${honoreeId}`, {
+  const res = await fetch(`/api/family/${honoreeId}/person`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -4529,9 +4529,11 @@ function capitalizeLabel(label) {
 
 function editTree(...args) { return new EditTree(...args) }
 
-function EditTree(cont, store) {
+function EditTree(cont, store, honoreeId, authContext) {
   this.cont = cont;
   this.store = store;
+  this.honoreeId = honoreeId;
+  this.authContext = authContext;
 
   this.fields = [
     {type: 'text', label: 'first name', id: 'first name'},
@@ -4639,6 +4641,8 @@ EditTree.prototype.cardEditForm = function(datum) {
     link_existing_rel_config: this.link_existing_rel_config,
     getKinshipInfo: this.kinship_info_config ? () => kinshipInfo(this.kinship_info_config, datum.id, this.store.getData()) : null,
     onFormCreation: this.onFormCreation,
+    honoreeId: this.honoreeId,
+    authContext: this.authContext,
     ...props
   });
 
@@ -5139,9 +5143,9 @@ Autocomplete.prototype.destroy = function() {
   this.autocomplete_cont.remove();
 };
 
-function createChart(...args) { return new CreateChart(...args) }
+function createChart(cont, data, honoreeId, authContext) { return new CreateChart(cont, data, honoreeId, authContext) }
 
-function CreateChart(cont, data) {
+function CreateChart(cont, data, honoreeId, authContext) {
   this.cont = null;
   this.store = null;
   this.svg = null;
@@ -5158,6 +5162,9 @@ function CreateChart(cont, data) {
 
   this.beforeUpdate = null;
   this.afterUpdate = null;
+
+  this.honoreeId = honoreeId;
+  this.authContext = authContext;
 
   this.init(cont, data);
 
@@ -5341,7 +5348,7 @@ CreateChart.prototype.setDuplicateBranchToggle = function(duplicate_branch_toggl
 };
 
 CreateChart.prototype.editTree = function() {
-  return this.editTreeInstance = editTree(this.cont, this.store)
+  return this.editTreeInstance = editTree(this.cont, this.store, this.honoreeId, this.authContext)
 };
 
 CreateChart.prototype.updateMain = function(d) {
