@@ -1,3 +1,4 @@
+import f3 from "./index.js";
 
 export default function(options) {
   return new CreateChart(options);

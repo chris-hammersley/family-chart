@@ -3749,7 +3749,7 @@ function CardSvg$1(cont, store) {
 CardSvg$1.prototype.init = function() {
   this.svg = this.cont.querySelector('svg.main_svg');
 
-  this.getCard = () => f3$1.elements.CardSvg({
+  this.getCard = () => f3.elements.CardSvg({
     store: this.store,
     svg: this.svg,
     card_dim: this.card_dim,
@@ -3845,7 +3845,7 @@ function CardHtml$1(cont, store) {
 CardHtml$1.prototype.init = function() {
   this.svg = this.cont.querySelector('svg.main_svg');
 
-  this.getCard = () => f3$1.elements.CardHtml({
+  this.getCard = () => f3.elements.CardHtml({
     store: this.store,
     card_display: this.card_display,
     cardImageField: this.cardImageField,
@@ -3981,7 +3981,7 @@ CardHtml$1.prototype.onLeavePathToMain = function(e, d) {
   return this
 };
 
-var f3$1 = {
+var f3 = {
   CalculateTree,
   createStore,
   view,
@@ -3996,4 +3996,4 @@ var f3$1 = {
   CardHtml: CardHtmlWrapper,
 };
 
-export default f3$1;
+export default f3;
