@@ -7,6 +7,8 @@ import * as elements from './elements.js'
 import * as htmlHandlers from './view/view.html.handlers.js'
 import * as icons from './view/elements/Card.icons.js'
 import createChart from './createChart.js'
+import EditTree from './CreateTree/editTree.js';
+import * as api from './utils/api.js';
 
 import CardSvg from './Cards/CardSvg.js'
 import CardHtml from './Cards/CardHtml.js'
@@ -21,7 +23,8 @@ export default {
   htmlHandlers,
   icons,
   createChart,
-
+  EditTree,
   CardSvg,
   CardHtml,
+  api,
 }
