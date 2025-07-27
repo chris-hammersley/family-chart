@@ -36,7 +36,6 @@ function CreateChart(options) {
   this.is_card_html = is_card_html;
   this.beforeUpdate = beforeUpdate;
   this.afterUpdate = afterUpdate;
-import f3 from "./index.js";
   this.honoreeId = honoreeId;
   this.authContext = authContext;
 

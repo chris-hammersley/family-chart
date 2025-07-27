@@ -273,6 +273,42 @@ function checkIfConnectedToFirstPerson(datum, data_stash) {
   }
 }
 
+function handleLinkRel(updated_datum, link_rel_id, store_data) {
+  const new_rel_id = updated_datum.id;
+
+  store_data.forEach(d => {
+    if (d.rels.father === new_rel_id) d.rels.father = link_rel_id;
+    if (d.rels.mother === new_rel_id) d.rels.mother = link_rel_id;
+    if ((d.rels.spouses || []).includes(new_rel_id)) {
+      d.rels.spouses = d.rels.spouses.filter(id => id !== new_rel_id);
+      if (!d.rels.spouses.includes(link_rel_id)) d.rels.spouses.push(link_rel_id);
+    }
+    if ((d.rels.children || []).includes(new_rel_id)) {
+      d.rels.children = d.rels.children.filter(id => id !== new_rel_id);
+      if (!d.rels.children.includes(link_rel_id)) d.rels.children.push(link_rel_id);
+    }
+  });
+
+  const link_rel = store_data.find(d => d.id === link_rel_id);
+  const new_rel = store_data.find(d => d.id === new_rel_id);
+  (new_rel.rels.children || []).forEach(child_id => {
+    if (!link_rel.rels.children) link_rel.rels.children = [];
+    if (!link_rel.rels.children.includes(child_id)) link_rel.rels.children.push(child_id);
+  });
+  (new_rel.rels.spouses || []).forEach(spouse_id => {
+    if (!link_rel.rels.spouses) link_rel.rels.spouses = [];
+    if (!link_rel.rels.spouses.includes(spouse_id)) link_rel.rels.spouses.push(spouse_id);
+  });
+
+  if (link_rel.rels.father && new_rel.rels.father) console.error('link rel already has father');
+  if (link_rel.rels.mother && new_rel.rels.mother) console.error('link rel already has mother');
+
+  if (new_rel.rels.father) link_rel.rels.father = new_rel.rels.father;
+  if (new_rel.rels.mother) link_rel.rels.mother = new_rel.rels.mother;
+
+  store_data.splice(store_data.findIndex(d => d.id === new_rel_id), 1);
+}
+
 function getLinkRelOptions(datum, data) {
   const rel_datum = datum._new_rel_data ? data.find(d => d.id === datum._new_rel_data.rel_id) : null;
   const ancestry_ids = getAncestry(datum, data);
@@ -343,6 +379,12 @@ async function deletePersonFromDB(id, honoreeId, authContext) {
   if (!res.ok) throw new Error('Failed to delete person');
 }
 
+var api = /*#__PURE__*/Object.freeze({
+__proto__: null,
+savePersonToDB: savePersonToDB,
+deletePersonFromDB: deletePersonFromDB
+});
+
 // Now requires honoreeId and authContext
 function createForm({
   datum,
@@ -405,15 +447,24 @@ function createForm({
   };
 
   fields.forEach(field => {
-    if (field.type === 'rel_reference') addRelReferenceField(field);
+    if (typeof field === 'string') {
+      // Handle string field names (backward compatibility)
+      form_creator.fields.push({
+        id: field,
+        type: 'text',
+        label: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1'),
+        initial_value: datum.data[field],
+      });
+    } else if (field.type === 'rel_reference') addRelReferenceField(field);
     else if (field.type === 'select') addSelectField(field);
-
-    else form_creator.fields.push({
-      id: field.id,
-      type: field.type,
-      label: field.label,
-      initial_value: datum.data[field.id],
-    });
+    else {
+      form_creator.fields.push({
+        id: field.id,
+        type: field.type,
+        label: field.label,
+        initial_value: datum.data[field.id],
+      });
+    }
   });
 
   return form_creator
@@ -3468,7 +3519,7 @@ function CreateChart(options) {
 }
 
 CreateChart.prototype.init = function(cont, data) {
-  this.cont = cont = setCont(cont);
+  this.cont = setCont(cont);
   const getSvgView = () => cont.querySelector('svg .view');
   const getHtmlSvg = () => cont.querySelector('#htmlSvg');
   const getHtmlView = () => cont.querySelector('#htmlSvg .cards_view');
@@ -3705,6 +3756,1411 @@ function setCont(cont) {
 function createNavCont(cont) {
   d3.select(cont).append('div').attr('class', 'f3-nav-cont');
 }
+
+var addRelative = (...args) => { return new AddRelative(...args) };
+
+function AddRelative(store, onActivate, cancelCallback) {
+  this.store = store;
+
+  this.onActivate = onActivate;
+  this.cancelCallback = cancelCallback;
+
+  this.datum = null;
+
+  this.onChange = null;
+  this.onCancel = null;
+
+  this.is_active = false;
+
+  this.addRelLabels = this.addRelLabelsDefault();
+
+  return this
+}
+
+AddRelative.prototype.activate = function(datum) {
+  if (this.is_active) this.onCancel();
+  this.onActivate();
+  this.is_active = true;
+  this.store.state.one_level_rels = true;
+
+  const store = this.store;
+
+  this.datum = datum;
+  let gender_stash = this.datum.data.gender;
+
+  addDatumRelsPlaceholders(datum, this.getStoreData(), this.addRelLabels);
+  store.updateTree({});
+
+  this.onChange = onChange.bind(this);
+  this.onCancel = onCancel.bind(this);
+
+  function onChange(updated_datum, props) {
+    if (updated_datum?._new_rel_data) {
+      if (props?.link_rel_id) handleLinkRel(updated_datum, props.link_rel_id, store.getData());
+      else delete updated_datum._new_rel_data;
+    } else if (updated_datum.id === datum.id) {
+      if (updated_datum.data.gender !== gender_stash) updateGendersForNewRelatives();
+    } else {
+      console.error('Something went wrong');
+    }
+
+    function updateGendersForNewRelatives() {
+      gender_stash = updated_datum.data.gender;
+      // if gender on main datum is changed, we need to switch mother/father ids for new children
+      const data = store.getData();
+      data.forEach(d => {
+        const rd = d._new_rel_data;
+        if (!rd) return
+        if (rd.rel_type === 'spouse') d.data.gender = d.data.gender === 'M' ? 'F' : 'M';
+        if (['son', 'daughter'].includes(rd.rel_type)) {
+          [d.rels.father, d.rels.mother] = [d.rels.mother, d.rels.father];
+        }
+      });
+    }
+  }
+
+  function onCancel() {
+    if (!this.is_active) return
+    this.is_active = false;
+    this.store.state.one_level_rels = false;
+
+    this.cleanUp();
+    this.cancelCallback(this.datum);
+
+    this.datum = null;
+    this.onChange = null;
+    this.onCancel = null;
+  }
+
+};
+
+AddRelative.prototype.setAddRelLabels = function(add_rel_labels) {
+  if (typeof add_rel_labels !== 'object') {
+    console.error('add_rel_labels must be an object');
+    return
+  }
+  for (let key in add_rel_labels) {
+    this.addRelLabels[key] = add_rel_labels[key];
+  }
+  return this
+};
+
+AddRelative.prototype.addRelLabelsDefault = function() {
+  return {
+    father: 'Add Father',
+    mother: 'Add Mother',
+    spouse: 'Add Spouse',
+    son: 'Add Son',
+    daughter: 'Add Daughter'
+  }
+};
+
+AddRelative.prototype.getStoreData = function() {
+  return this.store.getData()
+};
+
+AddRelative.prototype.cleanUp = function(data) {
+  if (!data) data = this.store.getData();
+  for (let i = data.length - 1; i >= 0; i--) {
+    const d = data[i];
+    if (d._new_rel_data) {
+      data.forEach(d2 => {
+        if (d2.rels.father === d.id) delete d2.rels.father;
+        if (d2.rels.mother === d.id) delete d2.rels.mother;
+        if ((d2.rels.children || []).includes(d.id)) d2.rels.children.splice(d2.rels.children.indexOf(d.id), 1);
+        if ((d2.rels.spouses || []).includes(d.id)) d2.rels.spouses.splice(d2.rels.spouses.indexOf(d.id), 1);
+      });
+      data.splice(i, 1);
+    }
+  }
+
+  return data
+};
+
+function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
+  // Use crypto.randomUUID for new person IDs
+  const getUUID = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  if (!datum.rels.father) {
+    const father = createNewPerson({id: getUUID(), data: {gender: "M"}, rels: {children: [datum.id]}});
+    father._new_rel_data = {rel_type: "father", label: addRelLabels.father, rel_id: datum.id};
+    datum.rels.father = father.id;
+    store_data.push(father);
+  }
+  if (!datum.rels.mother) {
+    const mother = createNewPerson({id: getUUID(), data: {gender: "F"}, rels: {children: [datum.id]}});
+    mother._new_rel_data = {rel_type: "mother", label: addRelLabels.mother, rel_id: datum.id};
+    datum.rels.mother = mother.id;
+    store_data.push(mother);
+  }
+  const mother = store_data.find(d => d.id === datum.rels.mother);
+  const father = store_data.find(d => d.id === datum.rels.father);
+
+  if (!mother.rels.spouses) mother.rels.spouses = [];
+  if (!father.rels.spouses) father.rels.spouses = [];
+  if (!mother.rels.spouses.includes(father.id)) mother.rels.spouses.push(father.id);
+  if (!father.rels.spouses.includes(mother.id)) father.rels.spouses.push(mother.id);
+
+  if (!mother.rels.children) mother.rels.children = [];
+  if (!father.rels.children) father.rels.children = [];
+  if (!mother.rels.children.includes(datum.id)) mother.rels.children.push(datum.id);
+  if (!father.rels.children.includes(datum.id)) father.rels.children.push(datum.id);
+
+  if (!datum.rels.spouses) datum.rels.spouses = [];
+
+  if (datum.rels.children) {
+    let new_spouse;
+    datum.rels.children.forEach(child_id => {
+      const child = store_data.find(d => d.id === child_id);
+      if (!child.rels.mother) {
+        if (!new_spouse) new_spouse = createNewPerson({id: getUUID(), data: {gender: "F"}, rels: {spouses: [datum.id], children: []}});
+        new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id};
+        new_spouse.rels.children.push(child.id);
+        datum.rels.spouses.push(new_spouse.id);
+        child.rels.mother = new_spouse.id;
+        store_data.push(new_spouse);
+      }
+      if (!child.rels.father) {
+        if (!new_spouse) new_spouse = createNewPerson({id: getUUID(), data: {gender: "M"}, rels: {spouses: [datum.id], children: []}});
+        new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id};
+        new_spouse.rels.children.push(child.id);
+        datum.rels.spouses.push(new_spouse.id);
+        child.rels.father = new_spouse.id;
+        store_data.push(new_spouse);
+      }
+    });
+  }
+
+  const spouse_gender = datum.data.gender === "M" ? "F" : "M";
+  const new_spouse = createNewPerson({id: getUUID(), data: {gender: spouse_gender}, rels: {spouses: [datum.id]}});
+  new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id};
+  datum.rels.spouses.push(new_spouse.id);
+  store_data.push(new_spouse);
+
+  if (!datum.rels.children) datum.rels.children = [];
+  datum.rels.spouses.forEach(spouse_id => {
+    const spouse = store_data.find(d => d.id === spouse_id);
+    const mother_id = datum.data.gender === "M" ? spouse.id : datum.id;
+    const father_id = datum.data.gender === "F" ? spouse.id : datum.id;
+    if (!spouse.rels.children) spouse.rels.children = [];
+    
+    const new_son = createNewPerson({id: getUUID(), data: {gender: "M"}, rels: {father: father_id, mother: mother_id}});
+    new_son._new_rel_data = {rel_type: "son", label: addRelLabels.son, other_parent_id: spouse.id, rel_id: datum.id};
+    spouse.rels.children.push(new_son.id);
+    datum.rels.children.push(new_son.id);
+    store_data.push(new_son);
+
+    const new_daughter = createNewPerson({id: getUUID(), data: {gender: "F"}, rels: {mother: mother_id, father: father_id}});
+    new_daughter._new_rel_data = {rel_type: "daughter", label: addRelLabels.daughter, other_parent_id: spouse.id, rel_id: datum.id};
+    spouse.rels.children.push(new_daughter.id);
+    datum.rels.children.push(new_daughter.id);
+    store_data.push(new_daughter);
+  });
+
+  return store_data
+}
+
+var removeRelative = (...args) => { return new RemoveRelative(...args) };
+
+function RemoveRelative(store, onActivate, cancelCallback, modal) {
+  this.store = store;
+
+  this.onActivate = onActivate;
+  this.cancelCallback = cancelCallback;
+  this.modal = modal;
+
+  this.datum = null;
+
+  this.onChange = null;
+  this.onCancel = null;
+
+  this.is_active = false;
+
+  return this
+}
+
+RemoveRelative.prototype.activate = function(datum) {
+  if (this.is_active) this.onCancel();
+  this.onActivate();
+  this.is_active = true;
+  this.store.state.one_level_rels = true;
+
+  const store = this.store;
+
+  this.datum = datum;
+
+  store.updateTree({});
+
+  this.onChange = onChange.bind(this);
+  this.onCancel = onCancel.bind(this);
+
+  function onChange(rel_tree_datum, onAccept) {
+    const rel_type = findRelType(rel_tree_datum);
+
+    const rels = datum.rels;
+    if (rel_type === 'father') handleFatherRemoval.call(this);
+    else if (rel_type === 'mother') handleMotherRemoval.call(this);
+    else if (rel_type === 'spouse') handleSpouseRemoval.call(this);
+    else if (rel_type === 'children') handleChildrenRemoval.call(this);
+
+    function handleFatherRemoval() {
+      const father = store.getDatum(rels.father);
+      father.rels.children = father.rels.children.filter(id => id !== datum.id);
+      rels.father = null;
+      onAccept();
+    }
+
+    function handleMotherRemoval() {
+      const mother = store.getDatum(rels.mother);
+      mother.rels.children = mother.rels.children.filter(id => id !== datum.id);
+      rels.mother = null;
+      onAccept();
+    }
+
+    function handleSpouseRemoval() {
+      const spouse = rel_tree_datum.data;
+      if (checkIfChildrenWithSpouse()) openModal.call(this);
+      else remove.call(this, true);
+      
+      function checkIfChildrenWithSpouse() {
+        const children = spouse.rels.children || [];
+        return children.some(ch_id => {
+          const child = store.getDatum(ch_id);
+          if (child.rels.father === spouse.id) return true
+          if (child.rels.mother === spouse.id) return true
+          return false
+        })
+      }
+
+      function openModal() {
+        const current_gender_class = datum.data.gender === 'M' ? 'f3-male-bg' : datum.data.gender === 'F' ? 'f3-female-bg' : null;
+        const spouse_gender_class = spouse.data.gender === 'M' ? 'f3-male-bg' : spouse.data.gender === 'F' ? 'f3-female-bg' : null;
+  
+        const div = d3$1.create('div').html(`
+          <p>You are removing a spouse relationship. Since there are shared children, please choose which parent should keep them in the family tree.</p>
+          <div class="f3-modal-options">
+            <button data-option="assign-to-current" class="f3-btn ${current_gender_class}">Keep children with current person</button>
+            <button data-option="assign-to-spouse" class="f3-btn ${spouse_gender_class}">Keep children with spouse</button>
+          </div>
+        `);
+  
+        div.selectAll('[data-option="assign-to-current"]').on('click', () => {
+          remove(true);
+          this.modal.close();
+        });
+  
+        div.selectAll('[data-option="assign-to-spouse"]').on('click', () => {
+          remove(false);
+          this.modal.close();
+        });
+  
+        this.modal.activate(div.node());
+      }
+      
+      function remove(to_current) {
+        rel_tree_datum.data.rels.spouses = rel_tree_datum.data.rels.spouses.filter(id => id !== datum.id);
+        rels.spouses = rels.spouses.filter(id => id !== rel_tree_datum.data.id);
+        const childrens_parent = to_current ? datum : rel_tree_datum.data;
+        const other_parent = to_current ? rel_tree_datum.data : datum;
+        (rels.children || []).forEach(id => {
+          const child = store.getDatum(id);
+          if (child.rels.father === other_parent.id) child.rels.father = null;
+          if (child.rels.mother === other_parent.id) child.rels.mother = null;
+        });
+        if (other_parent.rels.children) {
+          other_parent.rels.children = other_parent.rels.children.filter(ch_id => !(childrens_parent.rels.children || []).includes(ch_id));
+        }
+        onAccept();
+      }
+    }
+
+    function handleChildrenRemoval() {
+      rels.children = rels.children.filter(id => id !== rel_tree_datum.data.id);
+      const datum_rel_type = rel_tree_datum.data.rels.father === datum.id ? 'father' : 'mother';
+      rel_tree_datum.data.rels[datum_rel_type] = null;
+      onAccept();
+    }
+
+    function findRelType(d) {
+      if (d.is_ancestry) {
+        if (datum.rels.father === d.data.id) return 'father'
+        if (datum.rels.mother === d.data.id) return 'mother'
+      } 
+      else if (d.spouse) {
+        if (datum.rels.spouses.includes(d.data.id)) return 'spouse'
+      }
+      else {
+        if (datum.rels.children.includes(d.data.id)) return 'children'
+      }
+      return null
+    }
+  }
+
+  function onCancel() {
+    if (!this.is_active) return
+    this.is_active = false;
+    this.store.state.one_level_rels = false;
+
+    this.cancelCallback(this.datum);
+
+    this.datum = null;
+    this.onChange = null;
+    this.onCancel = null;
+  }
+
+};
+
+function modal(...args) { return new Modal(...args) }
+
+function Modal(cont) {
+
+  this.cont = cont;
+  this.modal_cont = null;
+  this.active = false;
+  this.onClose = null;
+
+  this.init();
+}
+
+Modal.prototype.init = function() {
+  this.modal_cont = d3$1.select(this.cont).append('div').attr('class', 'f3-modal').node();
+  d3$1.select(this.modal_cont).style('display', 'none');
+  this.create();
+};
+
+Modal.prototype.create = function() {
+  const modal = d3$1.select(this.modal_cont);
+  modal.html(`
+    <div class="f3-modal-content">
+      <span class="f3-modal-close">&times;</span>
+      <div class="f3-modal-content-inner"></div>
+      <div class="f3-modal-content-bottom"></div>
+    </div>
+  `);
+
+  
+  modal.select('.f3-modal-close').on('click', () => {
+    this.close();
+  });
+
+  modal.on('click', (event) => {
+    if (event.target == modal.node()) {
+      this.close();
+    }
+  });
+};
+
+Modal.prototype.activate = function(content, {boolean, onAccept, onCancel}={}) {
+  this.reset();
+
+  if (typeof content === 'string') {
+    d3$1.select(this.modal_cont).select('.f3-modal-content-inner').html(content);
+  }
+  else {
+    d3$1.select(this.modal_cont).select('.f3-modal-content-inner').node().appendChild(content);
+  }
+
+  if (boolean) {
+    d3$1.select(this.modal_cont).select('.f3-modal-content-bottom').html(`
+      <button class="f3-modal-accept f3-btn">Accept</button>
+      <button class="f3-modal-cancel f3-btn">Cancel</button>
+    `);
+    d3$1.select(this.modal_cont).select('.f3-modal-accept').on('click', () => {onAccept(); this.reset(); this.close();});
+    d3$1.select(this.modal_cont).select('.f3-modal-cancel').on('click', () => {this.close();});
+    this.onClose = onCancel;
+  }
+
+  this.open();
+};
+
+Modal.prototype.reset = function() {
+  this.onClose = null;
+  d3$1.select(this.modal_cont).select('.f3-modal-content-inner').html('');
+  d3$1.select(this.modal_cont).select('.f3-modal-content-bottom').html('');
+};
+
+Modal.prototype.open = function() {
+  this.modal_cont.style.display = 'block';
+  this.active = true;
+};
+
+Modal.prototype.close = function() {
+  this.modal_cont.style.display = 'none';
+  this.active = false;
+  if (this.onClose) this.onClose();
+};
+
+// https://support.ancestry.co.uk/s/article/Understanding-Kinship-Terms
+function calculateKinships$1(d_id, data_stash, kinship_info_config={}) {
+  const main_datum = data_stash.find(d => d.id === d_id);
+  const kinships = {};
+  loopCheck(main_datum.id, 'self', 0);
+  setupHalfKinships(kinships);
+  if (kinship_info_config.show_in_law) setupInLawKinships(kinships, data_stash);
+  setupKinshipsGender(kinships);
+
+  return kinships
+
+  function loopCheck(d_id, kinship, depth, prev_rel_id=undefined) {
+    if (!d_id) return
+    if (kinships[d_id] && kinships[d_id] !== kinship) console.error('kinship mismatch, kinship 1: ', kinships[d_id], 'kinship 2: ', kinship);
+    if (kinships[d_id]) return
+    if (kinship) kinships[d_id] = kinship;
+    const datum = data_stash.find(d => d.id === d_id);
+    const rels = datum.rels;
+    if (kinship === 'self') {
+      loopCheck(rels.father, 'parent', depth - 1, d_id);
+      loopCheck(rels.mother, 'parent', depth - 1, d_id);
+      (rels.spouses || []).forEach(id => loopCheck(id, 'spouse', depth));
+      (rels.children || []).forEach(id => loopCheck(id, 'child', depth + 1));
+    }
+    else if (kinship === 'parent') {
+      loopCheck(rels.father, 'grandparent', depth - 1, d_id);
+      loopCheck(rels.mother, 'grandparent', depth - 1, d_id);
+      (rels.children || []).forEach(id => {
+        if (prev_rel_id && prev_rel_id === id) return
+        loopCheck(id, 'sibling', depth+1);
+      });
+    }
+    else if (kinship === 'spouse') ;
+    else if (kinship === 'child') {
+      (rels.children || []).forEach(id => loopCheck(id, 'grandchild', depth + 1));
+    }
+    else if (kinship === 'sibling') {
+      (rels.children || []).forEach(id => loopCheck(id, 'nephew', depth + 1));
+    }
+    else if (kinship === 'grandparent') {
+      if (!prev_rel_id) console.error(`${kinship} should have prev_rel_id`);
+      loopCheck(rels.father, 'great-grandparent', depth - 1, d_id);
+      loopCheck(rels.mother, 'great-grandparent', depth - 1, d_id);
+      (rels.children || []).forEach(id => {
+        if (prev_rel_id && prev_rel_id === id) return
+        loopCheck(id, 'uncle', depth + 1);
+      });
+    }
+    else if (kinship.includes('grandchild')) {
+      (rels.children || []).forEach(id => loopCheck(id, getGreatKinship(kinship, depth + 1), depth + 1));
+    }
+    else if (kinship.includes('great-grandparent')) {
+      if (!prev_rel_id) console.error(`${kinship} should have prev_rel_id`);
+      loopCheck(rels.father, getGreatKinship(kinship, depth - 1), depth - 1, d_id);
+      loopCheck(rels.mother, getGreatKinship(kinship, depth - 1), depth - 1, d_id);
+      (rels.children || []).forEach(id => {
+        if (prev_rel_id && prev_rel_id === id) return
+        const great_count = getGreatCount(depth + 1);
+        if (great_count === 0) loopCheck(id, 'granduncle', depth + 1);
+        else if (great_count > 0) loopCheck(id, getGreatKinship('granduncle', depth + 1), depth + 1);
+        else console.error(`${kinship} should have great_count > -1`);
+      });
+    }
+    else if (kinship === 'nephew') {
+      (rels.children || []).forEach(id => loopCheck(id, 'grandnephew', depth + 1));
+    }
+    else if (kinship.includes('grandnephew')) {
+      (rels.children || []).forEach(id => loopCheck(id, getGreatKinship(kinship, depth + 1), depth + 1));
+    }
+    else if (kinship === 'uncle') {
+      (rels.children || []).forEach(id => loopCheck(id, '1st Cousin', depth + 1));
+    }
+    else if (kinship === 'granduncle') {
+      (rels.children || []).forEach(id => loopCheck(id, '1st Cousin 1x removed', depth + 1));
+    }
+    else if (kinship.includes('great-granduncle')) {
+      const child_depth = depth + 1;
+      const removed_count = Math.abs(child_depth);
+      (rels.children || []).forEach(id => loopCheck(id, `1st Cousin ${removed_count}x removed`, child_depth));
+    }
+    else if (kinship.slice(4).startsWith('Cousin')) {
+      (rels.children || []).forEach(id => {
+        const child_depth = depth + 1;
+        const removed_count = Math.abs(child_depth);
+        const cousin_count = +kinship[0];
+        if (child_depth === 0) {
+          loopCheck(id, `${getOrdinal(cousin_count+1)} Cousin`, child_depth);
+        } else if (child_depth < 0) {
+          loopCheck(id, `${getOrdinal(cousin_count+1)} Cousin ${removed_count}x removed`, child_depth);
+        } else if (child_depth > 0) {
+          loopCheck(id, `${getOrdinal(cousin_count)} Cousin ${removed_count}x removed`, child_depth);
+        }
+      });
+    }
+    else console.error(`${kinship} not found`);
+  }
+
+
+  function setupHalfKinships(kinships) {
+    const half_kinships = [];
+    Object.keys(kinships).forEach(d_id => {
+      const kinship = kinships[d_id];
+      if (kinship.includes('child')) return
+      if (kinship === 'spouse') return
+      const same_ancestors = findSameAncestor(main_datum.id, d_id, data_stash);
+      if (!same_ancestors) return console.error(`${data_stash.find(d => d.id === d_id).data} not found in main_ancestry`)
+
+      if (same_ancestors.is_half_kin) half_kinships.push(d_id);
+    });
+
+    half_kinships.forEach(d_id => {
+      kinships[d_id] = `Half ${kinships[d_id]}`;
+    });
+  }
+
+  function setupInLawKinships(kinships, data_stash) {
+    Object.keys(kinships).forEach(d_id => {
+      const kinship = kinships[d_id];
+      const datum = data_stash.find(d => d.id === d_id);
+
+      if (kinship === 'spouse') {
+        const siblings = [];
+        if (datum.rels.mother) (getD(datum.rels.mother).rels.children || []).forEach(d_id => siblings.push(d_id));
+        if (datum.rels.father) (getD(datum.rels.father).rels.children || []).forEach(d_id => siblings.push(d_id));
+        siblings.forEach(sibling_id => {if (!kinships[sibling_id]) kinships[sibling_id] = 'sibling-in-law';});  // gender label is added in setupKinshipsGender
+      }
+
+      if (kinship === 'child') {
+        (datum.rels.spouses || []).forEach(spouse_id => {if (!kinships[spouse_id]) kinships[spouse_id] = 'child-in-law';});  // gender label is added in setupKinshipsGender
+      }
+
+      if (kinship === 'uncle') {
+        (datum.rels.spouses || []).forEach(spouse_id => {if (!kinships[spouse_id]) kinships[spouse_id] = 'uncle-in-law';});  // gender label is added in setupKinshipsGender
+      }
+
+      if (kinship.includes('Cousin')) {
+        (datum.rels.spouses || []).forEach(spouse_id => {if (!kinships[spouse_id]) kinships[spouse_id] = `${kinship} in-law`;});  // gender label is added in setupKinshipsGender
+      }
+    });
+  }
+
+  function setupKinshipsGender(kinships) {
+    Object.keys(kinships).forEach(d_id => {
+      const kinship = kinships[d_id];
+      const datum = data_stash.find(d => d.id === d_id);
+      const gender = datum.data.gender;
+      if (kinship.includes('parent')) {
+        const rel_type_general = 'parent';
+        const rel_type = gender === 'M' ? 'father' : gender === 'F' ? 'mother' : rel_type_general;
+        kinships[d_id] = kinships[d_id].replace('parent', rel_type);
+      } else if (kinship.includes('sibling')) {
+        const rel_type_general = 'sibling';
+        const rel_type = gender === 'M' ? 'brother' : gender === 'F' ? 'sister' : rel_type_general;
+        kinships[d_id] = kinships[d_id].replace('sibling', rel_type);
+      } else if (kinship.includes('child')) {
+        const rel_type_general = 'child';
+        const rel_type = gender === 'M' ? 'son' : gender === 'F' ? 'daughter' : rel_type_general;
+        kinships[d_id] = kinships[d_id].replace('child', rel_type);
+      } else if (kinship.includes('uncle')) {
+        const rel_type_general = 'aunt/uncle';
+        const rel_type = gender === 'M' ? 'uncle' : gender === 'F' ? 'aunt' : rel_type_general;
+        kinships[d_id] = kinships[d_id].replace('uncle', rel_type);
+      } else if (kinship.includes('nephew')) {
+        const rel_type_general = 'neice/nephew';
+        const rel_type = gender === 'M' ? 'nephew' : gender === 'F' ? 'niece' : rel_type_general;
+        kinships[d_id] = kinships[d_id].replace('nephew', rel_type);
+      }
+    });
+  }
+
+  function getD(d_id) {
+    return data_stash.find(d => d.id === d_id)
+  }
+}
+
+function findSameAncestor(main_id, rel_id, data_stash) {
+  const main_ancestry = getAncestry(main_id);
+
+  let found;
+  let is_ancestor;
+  let is_half_kin;
+  checkIfRel(rel_id);
+  checkIfSpouse(rel_id);
+  loopCheck(rel_id);
+  if (!found) return null
+  return {found, is_ancestor, is_half_kin}
+  
+  function loopCheck(rel_id) {
+    if (found) return
+    if (rel_id === main_id) {
+      is_ancestor = true;
+      found = rel_id;
+      is_half_kin = false;
+      return
+    }
+    const d = data_stash.find(d => d.id === rel_id);
+    const rels = d.rels;
+    const parents = getParents(rels);
+    const found_parent = main_ancestry.find(p => (p[0] && parents[0] && p[0] === parents[0]) || (p[1] && parents[1] && p[1] === parents[1]));
+    if (found_parent) {
+      found = parents.filter((p, i) => p === found_parent[i]);
+      is_half_kin = checkIfHalfKin(parents, found_parent);
+      return
+    }
+    if (rels.father) loopCheck(rels.father);
+    if (rels.mother) loopCheck(rels.mother);
+  }
+
+  function getAncestry(rel_id) {
+    const ancestry = [];
+    loopAdd(rel_id);
+    return ancestry
+  
+    function loopAdd(rel_id) {
+      const d = data_stash.find(d => d.id === rel_id);
+      const rels = d.rels;
+      ancestry.push(getParents(rels));
+      if (rels.father) loopAdd(rels.father);
+      if (rels.mother) loopAdd(rels.mother);
+    }
+  }
+  
+  function getParents(rels) {
+    return [rels.father, rels.mother]
+  }
+
+  function checkIfRel(rel_id) {
+    const d = data_stash.find(d => d.id === rel_id);
+    const found_parent = main_ancestry.find(p => p[0] === d.id || p[1] === d.id);
+    if (found_parent) {
+      is_ancestor = true;
+      found = rel_id;
+      is_half_kin = false;
+    }
+  }
+
+  function checkIfSpouse(rel_id) {
+    const main_datum = data_stash.find(d => d.id === main_id);
+    if ((main_datum.rels.spouses || []).includes(rel_id)) {
+      found = [main_id, rel_id];
+    }
+  }
+
+
+  function checkIfHalfKin(ancestors1, ancestors2) {
+    return ancestors1[0] !== ancestors2[0] || ancestors1[1] !== ancestors2[1]
+  }
+}
+
+function getKinshipsDataStash$1(main_id, rel_id, data_stash, kinships) {
+  let in_law_id;
+  const kinship = kinships[rel_id].toLowerCase();
+  if (kinship.includes('in-law')) {
+    in_law_id = rel_id;
+    const datum = data_stash.find(d => d.id === in_law_id);
+    if (kinship.includes('sister') || kinship.includes('brother')) {
+      rel_id = main_id;
+    } else {
+      rel_id = datum.rels.spouses.find(d_id => kinships[d_id] && !kinships[d_id].includes('in-law'));
+    }
+  }
+
+  const same_ancestors = findSameAncestor(main_id, rel_id, data_stash);
+  if (!same_ancestors) return console.error(`${rel_id} not found in main_ancestry`)
+
+  const same_ancestor_id = same_ancestors.is_ancestor ? same_ancestors.found : same_ancestors.found[0];
+  const same_ancestor = data_stash.find(d => d.id === same_ancestor_id);
+  
+  const root = d3$1.hierarchy(same_ancestor, hierarchyGetterChildren);
+  const same_ancestor_progeny = root.descendants().map(d => d.data.id);
+  const main_ancestry = getCleanAncestry(main_id, same_ancestor_progeny);
+  const rel_ancestry = getCleanAncestry(rel_id, same_ancestor_progeny);
+
+  loopClean(root);
+  const kinship_data_stash = root.descendants().map(d => {
+    const datum = {
+      id: d.data.id,
+      data: JSON.parse(JSON.stringify(d.data.data)),
+      kinship: kinships[d.data.id],
+      rels: {}
+    };
+    if (d.children && d.children.length > 0) datum.rels.children = d.children.map(c => c.data.id);
+    return datum
+  });
+
+  if (kinship_data_stash.length > 0 && !same_ancestors.is_ancestor && !same_ancestors.is_half_kin) addRootSpouse(kinship_data_stash);
+  if (in_law_id) addInLawConnection(kinship_data_stash);
+
+  return kinship_data_stash
+
+  
+  function loopClean(tree_datum) {
+    tree_datum.children = (tree_datum.children || []).filter(child => {
+      if (main_ancestry.includes(child.data.id)) return true
+      if (rel_ancestry.includes(child.data.id)) return true
+      return false
+    });
+    tree_datum.children.forEach(child => loopClean(child));
+    if (tree_datum.children.length === 0) delete tree_datum.children;
+  }
+
+  function hierarchyGetterChildren(d) {
+    const children = [...(d.rels.children || [])].map(id => data_stash.find(d => d.id === id));
+    return children
+  }
+
+  function getCleanAncestry(d_id, same_ancestor_progeny) {
+    const ancestry = [d_id];
+    loopAdd(d_id);
+    return ancestry
+
+    function loopAdd(d_id) {
+      const d = data_stash.find(d => d.id === d_id);
+      const rels = d.rels;
+      if (same_ancestor_progeny.includes(rels.mother)) {
+        ancestry.push(rels.mother);
+        loopAdd(rels.mother);
+      }
+      if (same_ancestor_progeny.includes(rels.father)) {
+        ancestry.push(rels.father);
+        loopAdd(rels.father);
+      }
+    }
+  }
+
+  function addRootSpouse(kinship_data_stash) {
+    const datum = kinship_data_stash[0];
+    const spouse_id = same_ancestor_id === same_ancestors.found[0] ? same_ancestors.found[1] : same_ancestors.found[0];
+    datum.rels.spouses = [spouse_id];
+    const spouse = data_stash.find(d => d.id === spouse_id);
+    const spouse_datum = {
+      id: spouse.id,
+      data: JSON.parse(JSON.stringify(spouse.data)),
+      kinship: kinships[spouse.id],
+      rels: {
+        spouses: [datum.id],
+        children: datum.rels.children
+      }
+    };
+    kinship_data_stash.push(spouse_datum);
+
+    (datum.rels.children || []).forEach(child_id => {
+      const child = data_stash.find(d => d.id === child_id);
+      const kinship_child = kinship_data_stash.find(d => d.id === child_id);
+      kinship_child.rels.father = child.rels.father;
+      kinship_child.rels.mother = child.rels.mother;
+    });
+  }
+
+  function addInLawConnection(kinship_data_stash) {
+    if (kinship.includes('sister') || kinship.includes('brother')) {
+      addInLawSibling(kinship_data_stash);
+    } else {
+      addInLawSpouse(kinship_data_stash);
+    }
+  }
+
+  function addInLawSpouse(kinship_data_stash) {
+    const datum = kinship_data_stash.find(d => d.id === rel_id);
+    const spouse_id = in_law_id;
+    datum.rels.spouses = [spouse_id];
+
+    const spouse = data_stash.find(d => d.id === spouse_id);
+    const spouse_datum = {
+      id: spouse.id,
+      data: JSON.parse(JSON.stringify(spouse.data)),
+      kinship: kinships[spouse.id],
+      rels: {
+        spouses: [datum.id],
+        children: []
+      }
+    };
+    kinship_data_stash.push(spouse_datum);
+  }
+
+  function addInLawSibling(kinship_data_stash) {
+    const datum = kinship_data_stash.find(d => d.id === rel_id);
+    const in_law_datum = getD(in_law_id);
+
+    kinship_data_stash.push({
+      id: in_law_id,
+      data: JSON.parse(JSON.stringify(in_law_datum.data)),
+      kinship: kinships[in_law_id],
+      rels: {
+        spouses: [],
+        children: []
+      }
+    });
+
+    const siblings = [];
+    if (in_law_datum.rels.mother) (getD(in_law_datum.rels.mother).rels.children || []).forEach(d_id => siblings.push(d_id));
+    if (in_law_datum.rels.father) (getD(in_law_datum.rels.father).rels.children || []).forEach(d_id => siblings.push(d_id));
+    
+    const spouse_id = getD(rel_id).rels.spouses.find(d_id => siblings.includes(d_id));
+    datum.rels.spouses = [spouse_id];
+    const spouse = getD(spouse_id);
+    const spouse_datum = {
+      id: spouse.id,
+      data: JSON.parse(JSON.stringify(spouse.data)),
+      kinship: kinships[spouse.id],
+      rels: {
+        spouses: [datum.id],
+        children: []
+      }
+    };
+    kinship_data_stash.push(spouse_datum);
+
+    if (in_law_datum.rels.father) {
+      const father_id = in_law_datum.rels.father;
+      const father = getD(father_id);
+      const father_datum = {
+        id: father.id,
+        data: JSON.parse(JSON.stringify(father.data)),
+        kinship: 'Father-in-law',
+        rels: {
+          spouses: [],
+          children: [spouse_id, in_law_id]
+        }
+      };
+      if (in_law_datum.rels.mother) {father_datum.rels.spouses.push(in_law_datum.rels.mother);}
+      kinship_data_stash.unshift(father_datum);
+    }
+    if (in_law_datum.rels.mother) {
+      const mother_id = in_law_datum.rels.mother;
+      const mother = getD(mother_id);
+      const mother_datum = {
+        id: mother.id,
+        data: JSON.parse(JSON.stringify(mother.data)),
+        kinship: 'Mother-in-law',
+        rels: {
+          spouses: [],
+          children: [spouse_id, in_law_id]
+        }
+      };
+      if (in_law_datum.rels.father) {mother_datum.rels.spouses.push(in_law_datum.rels.father);}
+      kinship_data_stash.unshift(mother_datum);
+    }
+  }
+
+  function getD(d_id) {
+    return data_stash.find(d => d.id === d_id)
+  } 
+}
+
+function getOrdinal(n) {
+  const s = ['st','nd','rd'];
+  return s[n-1] ? n+s[n-1] : n+'th'
+}
+
+function getGreatCount(depth) {
+  const depth_abs = Math.abs(depth);
+  return depth_abs - 2
+}
+
+function getGreatKinship(kinship, depth) {
+  const great_count = getGreatCount(depth);
+  if (kinship.includes('great-')) kinship = kinship.split('great-')[1];
+  if (great_count === 1) {
+    return `great-${kinship}`
+  } else if (great_count > 1) {
+    return `${great_count}x-great-${kinship}`;
+  } else {
+    console.error(`${kinship} should have great_count > 1`);
+    return kinship
+  }
+}
+
+function kinshipInfo(kinship_info_config, rel_id, data_stash) {
+  const {self_id, getLabel, title} = kinship_info_config;
+  const relationships = calculateKinships$1(self_id, data_stash, kinship_info_config);
+  const relationship = relationships[rel_id];
+  if (!relationship) return
+  let label = relationship;
+  if (relationship === 'self') label = 'You';
+  else label = capitalizeLabel(label);
+  const html = (`
+    <div class="f3-kinship-info">
+      <div class="f3-info-field">
+        <span class="f3-info-field-label">${title}</span>
+        <span class="f3-info-field-value">
+          <span>${label}</span>
+          <span class="f3-kinship-info-icon">${infoSvgIcon()}</span>
+        </span>
+      </div>
+    </div>
+  `);
+  const kinship_info_node = d3$1.create('div').html(html).select('div').node();
+  let popup;
+  d3$1.select(kinship_info_node).select('.f3-kinship-info-icon').on('click', (e) => createPopup(e, kinship_info_node));
+  return kinship_info_node
+
+  function createPopup(e, cont) {
+    const width = 250;
+    const height = 400;
+    let left = e.clientX - width - 10;
+    let top = e.clientY - height - 10;
+    if (left + width > window.innerWidth) {
+      left = window.innerWidth - width - 10;
+    }
+    if (top < 0) {
+      top = 10;
+    }
+    if (popup && popup.active) {
+      popup.close();
+      popup = null;
+      return
+    }
+    
+    popup = f3.elements.infoPopup(cont);
+    d3$1.select(popup.popup_cont)
+      .style('width', `${width}px`)
+      .style('height', `${height}px`)
+      .style('left', `${left}px`)
+      .style('top', `${top}px`);
+
+    const inner_cont = popup.popup_cont.querySelector('.f3-popup-content-inner');
+ 
+    popup.activate();
+    createSmallTree(self_id, rel_id, data_stash, relationships, inner_cont, getLabel);
+  }
+}
+
+function createSmallTree(self_id, rel_id, data_stash, relationships, parent_cont, getLabel) {
+  if (!d3$1.select(parent_cont).select('#SmallChart').node()) {
+    d3$1.select(parent_cont).append('div').attr('id', 'SmallChart').attr('class', 'f3');
+  }
+  const small_chart = d3$1.select('#SmallChart');
+  small_chart.selectAll('*').remove();
+  const small_chart_data = getKinshipsDataStash$1(self_id, rel_id, data_stash, relationships);
+
+  let kinship_label_toggle = true;
+  const kinship_label_toggle_cont = small_chart.append('div');
+
+  create(small_chart_data);
+
+  function create(data) {
+    const f3Chart = f3.createChart('#SmallChart', data)
+      .setTransitionTime(500)
+      .setCardXSpacing(170)
+      .setCardYSpacing(70)
+      .setSingleParentEmptyCard(false);
+  
+    const f3Card = f3Chart.setCard(f3.CardHtml)
+      .setStyle('rect')
+      .setCardInnerHtmlCreator(d => {
+        return getCardInnerRect(d)
+      })
+      .setOnCardUpdate(function(d) {
+        const card = d3$1.select(this).select('.card');
+        card.classed('card-main', false);
+      });
+
+    f3Card.onCardClick = ((e, d) => {});
+  
+    f3Chart.updateTree({initial: true});
+
+    setTimeout(() => setupSameZoom(0.65), 100);
+
+    createKinshipLabelToggle();
+
+    function getCardInnerRect(d) {
+      let label = d.data.kinship === 'self' ? 'You' : d.data.kinship;
+      label = capitalizeLabel(label);
+      if (!kinship_label_toggle) label = getLabel(d.data);
+      
+      return (`
+        <div class="card-inner card-rect ${getCardClass()}">
+          <div class="card-label">${label}</div>
+        </div>
+      `)
+
+      function getCardClass() {
+        if (d.data.kinship === 'self') {
+          return 'card-kinship-self' + (kinship_label_toggle ? '' : ' f3-real-label')
+        } else if (d.data.id === rel_id) {
+          return 'card-kinship-rel'
+        } else {
+          return 'card-kinship-default'
+        }
+      }
+    }
+
+    function createKinshipLabelToggle() {
+      kinship_label_toggle_cont
+        .classed('f3-kinship-labels-toggle', true);
+
+      kinship_label_toggle_cont.append('label')
+        .text('Kinship labels')
+        .append('input')
+          .attr('type', 'checkbox')
+          .attr('checked', true)
+          .on('change', (e) => {
+            kinship_label_toggle = !kinship_label_toggle;
+            f3Chart.updateTree({initial: false, tree_position: 'inherit'});
+          });
+    }
+
+    function setupSameZoom(zoom_level) {
+      const svg = f3Chart.cont.querySelector('svg.main_svg');
+      const current_zoom = f3.handlers.getCurrentZoom(svg);
+      if (current_zoom.k > zoom_level) {
+        f3.handlers.zoomTo(svg, zoom_level);
+      }
+    }
+  }
+}
+
+function capitalizeLabel(label) {
+  label = label[0].toUpperCase() + label.slice(1);
+  if (label.includes('great-')) label = label.replace('great-', 'Great-');
+  return label
+}
+
+function EditTreeFactory(...args) { return new EditTree(...args) }
+
+function EditTree(cont, store, honoreeId, authContext) {
+  this.cont = cont;
+  this.store = store;
+  this.honoreeId = honoreeId;
+  this.authContext = authContext;
+
+  // Default fields, can be overridden by setFields
+  this.defaultFields = [
+    {type: 'text', label: 'first name', id: 'first name'},
+    {type: 'text', label: 'last name', id: 'last name'},
+    {type: 'text', label: 'birthday', id: 'birthday'},
+    {type: 'text', label: 'avatar', id: 'avatar'}
+  ];
+  this.fields = null;
+
+  this.form_cont = null;
+
+  this.is_fixed = true;
+
+  this.history = null;
+  this.no_edit = false;
+
+  this.onChange = null;
+
+  this.editFirst = false;
+
+  this.postSubmit = null;
+
+  this.link_existing_rel_config = null;
+
+  this.onFormCreation = null;
+
+  this.kinship_info_config = null;
+
+  this.init();
+
+  return this
+}
+
+EditTree.prototype.init = function() {
+  this.form_cont = d3$1.select(this.cont).append('div').classed('f3-form-cont', true).node();
+  this.modal = this.setupModal();
+  this.addRelativeInstance = this.setupAddRelative();
+  this.removeRelativeInstance = this.setupRemoveRelative();
+  this.createHistory();
+};
+
+EditTree.prototype.open = function(datum) {
+  if (datum.data.data && typeof datum.data.data === 'object') datum = datum.data;
+  const tree_datum = this.store.getTreeDatum(datum.id);
+  if (this.addRelativeInstance.is_active) handleAddRelative.call(this, datum);
+  else if (this.removeRelativeInstance.is_active) handleRemoveRelative.call(this, tree_datum);
+  else {
+    this.cardEditForm(datum);
+  }
+
+  function handleAddRelative() {
+    if (datum._new_rel_data) {
+      this.cardEditForm(datum);
+    } else {
+      this.addRelativeInstance.onCancel();
+      this.cardEditForm(datum);
+      this.store.updateMainId(datum.id);
+      this.store.updateTree({});
+    }
+  }
+
+  function handleRemoveRelative() {
+    if (datum.id === this.removeRelativeInstance.datum.id) {
+      this.removeRelativeInstance.onCancel();
+      this.cardEditForm(datum);
+    } else {
+      this.removeRelativeInstance.onChange(tree_datum, onAccept.bind(this));
+
+      function onAccept() {
+        this.removeRelativeInstance.onCancel();
+        this.updateHistory();
+        this.store.updateTree({});
+      }
+    }
+  }
+};
+
+EditTree.prototype.openWithoutRelCancel = function(datum) {
+  this.cardEditForm(datum);
+};
+
+EditTree.prototype.cardEditForm = function(datum) {
+  const props = {};
+  const is_new_rel = datum?._new_rel_data;
+  if (is_new_rel) {
+    props.onCancel = () => this.addRelativeInstance.onCancel();
+  } else {
+    props.addRelative = this.addRelativeInstance;
+    props.removeRelative = this.removeRelativeInstance;
+    props.deletePerson = () => {
+      deletePerson(datum, this.store.getData());
+      this.openFormWithId(this.store.getLastAvailableMainDatum().id);
+
+      this.store.updateTree({});
+    };
+  }
+
+  const form_creator = f3.handlers.createForm({
+    store: this.store, 
+    datum, 
+    postSubmit: postSubmit.bind(this),
+    fields: this.fields || this.defaultFields,
+    addRelative: null,
+    onCancel: () => {},
+    editFirst: this.editFirst,
+    link_existing_rel_config: this.link_existing_rel_config,
+    getKinshipInfo: this.kinship_info_config ? () => kinshipInfo(this.kinship_info_config, datum.id, this.store.getData()) : null,
+    onFormCreation: this.onFormCreation,
+    honoreeId: this.honoreeId,
+    authContext: this.authContext,
+    ...props
+  });
+
+  form_creator.no_edit = this.no_edit;
+  if (this.no_edit) form_creator.editable = false;
+  const form_cont = f3.handlers.formInfoSetup(form_creator, this.closeForm.bind(this));
+
+  this.form_cont.innerHTML = '';
+  this.form_cont.appendChild(form_cont);
+
+  this.openForm();
+
+  function postSubmit(props) {
+    if (this.addRelativeInstance.is_active) {
+      this.addRelativeInstance.onChange(datum, props);
+      if (this.postSubmit) this.postSubmit(datum, this.store.getData());
+      const active_datum = this.addRelativeInstance.datum;
+      this.store.updateMainId(active_datum.id);
+      this.openWithoutRelCancel(active_datum);
+    } else if ((datum.to_add || datum.unknown) && props?.link_rel_id) {
+      handleLinkRel(datum, props.link_rel_id, this.store.getData());
+      this.store.updateMainId(props.link_rel_id);
+      this.openFormWithId(props.link_rel_id);
+    } else if (!props?.delete) {
+      if (this.postSubmit) this.postSubmit(datum, this.store.getData());
+      this.openFormWithId(datum.id);
+    }
+
+    if (!this.is_fixed) this.closeForm();
+    
+    this.store.updateTree({});
+
+    this.updateHistory();
+  }
+};
+
+EditTree.prototype.openForm = function() {
+  d3$1.select(this.form_cont).classed('opened', true);
+};
+
+EditTree.prototype.closeForm = function() {
+  d3$1.select(this.form_cont).classed('opened', false).html('');
+  this.store.updateTree({});
+};
+
+EditTree.prototype.fixed = function() {
+  this.is_fixed = true;
+  d3$1.select(this.form_cont).style('position', 'relative');
+
+  return this
+};
+
+EditTree.prototype.absolute = function() {
+  this.is_fixed = false;
+  d3$1.select(this.form_cont).style('position', 'absolute');
+
+  return this
+};
+
+EditTree.prototype.setCardClickOpen = function(card) {
+  card.setOnCardClick((e, d) => {
+    if (this.isAddingRelative()) {
+      this.open(d.data);
+    } else if (this.isRemovingRelative()) {
+      this.open(d.data);
+    } else {
+      this.open(d.data);
+      card.onCardClickDefault(e, d);
+    }
+  });
+
+  return this
+};
+
+EditTree.prototype.openFormWithId = function(d_id) {
+  if (d_id) {
+    const d = this.store.getDatum(d_id);
+    this.openWithoutRelCancel(d);
+  } else {
+    const d = this.store.getMainDatum();
+    this.openWithoutRelCancel(d);
+  }
+};
+
+EditTree.prototype.createHistory = function() {
+  this.history = f3.handlers.createHistory(this.store, this.getStoreDataCopy.bind(this), historyUpdateTree.bind(this));
+  this.history.controls = f3.handlers.createHistoryControls(this.cont.querySelector('.f3-nav-cont'), this.history);
+  this.history.changed();
+  this.history.controls.updateButtons();
+
+  return this
+
+  function historyUpdateTree() {
+    if (this.addRelativeInstance.is_active) this.addRelativeInstance.onCancel();
+    if (this.removeRelativeInstance.is_active) this.removeRelativeInstance.onCancel();
+    this.store.updateTree({initial: false});
+    this.history.controls.updateButtons();
+    this.openFormWithId(this.store.getMainDatum()?.id);
+    if (this.onChange) this.onChange();
+  }
+};
+
+EditTree.prototype.setNoEdit = function() {
+  this.no_edit = true;
+
+  return this
+};
+
+EditTree.prototype.setEdit = function() {
+  this.no_edit = false;
+
+  return this
+};
+
+EditTree.prototype.setFields = function(fields) {
+  this.fields = fields;
+  return this;
+};
+
+EditTree.prototype.setOnChange = function(fn) {
+  this.onChange = fn;
+
+  return this
+};
+
+EditTree.prototype.addRelative = function(datum) {
+  if (!datum) datum = this.store.getMainDatum();
+  this.addRelativeInstance.activate(datum);
+
+  return this
+};
+
+EditTree.prototype.setupAddRelative = function() {
+  return addRelative(this.store, onActivate.bind(this), cancelCallback.bind(this))
+
+  function onActivate() {
+    if (this.removeRelativeInstance.is_active) this.removeRelativeInstance.onCancel();
+  }
+
+  function cancelCallback(datum) {
+    this.store.updateMainId(datum.id);
+    this.store.updateTree({});
+    this.openFormWithId(datum.id);
+  }
+};
+
+EditTree.prototype.setupRemoveRelative = function() {
+  return removeRelative(this.store, onActivate.bind(this), cancelCallback.bind(this), this.modal)
+
+  function onActivate() {
+    if (this.addRelativeInstance.is_active) this.addRelativeInstance.onCancel();
+    setClass(this.cont, true);
+  }
+
+  function cancelCallback(datum) {
+    setClass(this.cont, false);
+    this.store.updateMainId(datum.id);
+    this.store.updateTree({});
+    this.openFormWithId(datum.id);
+  }
+
+  function setClass(cont, add) {
+    d3$1.select(cont).select('#f3Canvas').classed('f3-remove-relative-active', add);
+  }
+};
+
+EditTree.prototype.setupModal = function() {
+  return modal(this.cont)
+};
+
+EditTree.prototype.setEditFirst = function(editFirst) {
+  this.editFirst = editFirst;
+
+  return this
+};
+
+EditTree.prototype.isAddingRelative = function() {
+  return this.addRelativeInstance.is_active
+};
+
+EditTree.prototype.isRemovingRelative = function() {
+  return this.removeRelativeInstance.is_active
+};
+
+EditTree.prototype.setAddRelLabels = function(add_rel_labels) {
+  this.addRelativeInstance.setAddRelLabels(add_rel_labels);
+  return this
+};
+
+EditTree.prototype.setLinkExistingRelConfig = function(link_existing_rel_config) {
+  this.link_existing_rel_config = link_existing_rel_config;
+  return this
+};
+
+EditTree.prototype.setOnFormCreation = function(onFormCreation) {
+  this.onFormCreation = onFormCreation;
+
+  return this
+};
+
+EditTree.prototype.setKinshipInfo = function(kinship_info_config) {
+  this.kinship_info_config = kinship_info_config;
+
+  return this
+};
+
+EditTree.prototype.getStoreDataCopy = function() {  // todo: should make more sense
+  let data = JSON.parse(JSON.stringify(this.store.getData()));  // important to make a deep copy of the data
+  if (this.addRelativeInstance.is_active) data = this.addRelativeInstance.cleanUp(data);    
+  data = f3.handlers.cleanupDataJson(data);
+  return data
+};
+
+EditTree.prototype.getDataJson = function() {
+  return JSON.stringify(this.getStoreDataCopy(), null, 2)
+};
+
+EditTree.prototype.updateHistory = function() {
+  if (this.history) {
+    this.history.changed();
+    this.history.controls.updateButtons();
+  }
+
+  if (this.onChange) this.onChange();
+};
+
+EditTree.prototype.setPostSubmit = function(postSubmit) {
+  this.postSubmit = postSubmit;
+
+  return this
+};
+
+EditTree.prototype.destroy = function() {
+  this.history.controls.destroy();
+  this.history = null;
+  d3$1.select(this.cont).select('.f3-form-cont').remove();
+  if (this.addRelativeInstance.onCancel) this.addRelativeInstance.onCancel();
+  this.store.updateTree({});
+
+  return this
+};
 
 function processCardDisplay(card_display) {
   const card_display_arr = [];
@@ -3991,9 +5447,11 @@ var f3 = {
   htmlHandlers,
   icons,
   createChart,
-
   CardSvg: CardSvgWrapper,
   CardHtml: CardHtmlWrapper,
+  api,
+  EditTree: EditTreeFactory, // for backward compatibility
+  EditTreeClass: EditTree,   // for direct class usage
 };
 
 export default f3;

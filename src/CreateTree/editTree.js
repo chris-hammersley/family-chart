@@ -8,7 +8,7 @@ import modal from "./modal.js"
 import { kinshipInfo } from "./kinshipInfo.js"
 
 export default function(...args) { return new EditTree(...args) }
-
+export { EditTree }
 
 function EditTree(cont, store, honoreeId, authContext) {
   this.cont = cont
