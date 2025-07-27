@@ -46,7 +46,7 @@ import f3 from "./index.js";
 }
 
 CreateChart.prototype.init = function(cont, data) {
-  this.cont = cont = setCont(cont)
+  this.cont = setCont(cont)
   const getSvgView = () => cont.querySelector('svg .view')
   const getHtmlSvg = () => cont.querySelector('#htmlSvg')
   const getHtmlView = () => cont.querySelector('#htmlSvg .cards_view')

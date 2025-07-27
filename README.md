@@ -68,10 +68,17 @@ Family Chart is a powerful D3.js-based visualization library for creating beauti
 <!-- GETTING STARTED -->
 ## Getting Started
 
-### MongoDB Setup (Required)
+### MongoDB & UUID Setup (Required)
 
 Family Chart now uses MongoDB as the only data source for all examples and runtime usage. You must have a MongoDB instance running (local or cloud, e.g. MongoDB Atlas).
 
+Additionally, you must install the `uuid` package for unique ID generation:
+
+```bash
+npm install uuid
+```
+
+#### MongoDB Setup
 1. Create a `.env.local` file in the project root with:
    ```
    MONGODB_URI=mongodb://localhost:27017/familychart
@@ -81,6 +88,7 @@ Family Chart now uses MongoDB as the only data source for all examples and runti
    ```bash
    npm install
    npm install mongoose
+   npm install uuid
    ```
 3. Start your MongoDB server if running locally.
 4. Run the app as usual (e.g. `npm run dev` for Next.js or Vite).
@@ -89,27 +97,93 @@ Family Chart now uses MongoDB as the only data source for all examples and runti
 
 - **Node.js** (v20+ required)
 - **MongoDB** (local or cloud, e.g. MongoDB Atlas)
+- **uuid** npm package
 
-### Usage
+---
 
-All data is now read and written via the `/api/family` endpoint, which connects to MongoDB using Mongoose. Local JSON files are no longer used at runtime.
+## Getting Started from Blank Node (React/Next.js Integration)
 
-[![Create tree][create-tree-screenshot]](https://donatso.github.io/family-chart-doc/create-tree)
+Follow these steps to integrate the Family Chart library and its create-tree functionality into a new or existing React/Next.js project:
 
-1. Visit [doc/create-tree](https://donatso.github.io/family-chart-doc/create-tree/) 
-2. Create your family tree
-3. Copy/paste generated code for Vanila, Vue or React.
-4. Give me some github stars (:
+### 1. Install Dependencies
 
-<!-- USAGE EXAMPLES -->
-## Usage
+```bash
+npm install family-chart mongoose uuid
+```
 
+### 2. Set Up MongoDB Connection
 
-### [Static](https://codepen.io/donatso/pen/ExqJVEQ?editors=1000)
+Create a `.env.local` file in your project root:
 
-### [React](https://codepen.io/donatso/pen/mdNgeQN?editors=0010)
+```
+MONGODB_URI=mongodb://localhost:27017/familychart
+```
 
-### [Vue](https://codepen.io/donatso/pen/poMBjZe)
+Or use your MongoDB Atlas connection string.
+
+### 3. Create the API Route (Next.js Example)
+
+Create a file at `pages/api/family/[honoreeId]/person.js`:
+
+```js
+import dbConnect from '../../../lib/dbConnect';
+import Person from '../../../models/Person';
+
+export default async function handler(req, res) {
+  await dbConnect();
+  const { honoreeId } = req.query;
+  if (req.method === 'GET') {
+    const people = await Person.find({ honoreeId });
+    res.status(200).json(people);
+  } else if (req.method === 'POST') {
+    const person = new Person({ ...req.body, honoreeId });
+    await person.save();
+    res.status(201).json(person);
+  } // Add PUT/DELETE as needed
+}
+```
+
+### 4. Add the Family Chart Component
+
+Create a component (e.g. `components/FamilyTreeChart.jsx`):
+
+```jsx
+import { useEffect, useRef } from 'react';
+import f3 from 'family-chart';
+import 'family-chart/styles/family-chart.css';
+
+const FamilyTreeChart = ({ honoreeId, data, user }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !data) return;
+    f3.createChart({
+      cont: containerRef.current,
+      data,
+      honoreeId,
+      authContext: { userId: user?._id, token: user?.accessToken }
+    });
+  }, [data, honoreeId, user]);
+
+  return <div ref={containerRef} className="f3 f3-cont w-full h-full" />;
+};
+
+export default FamilyTreeChart;
+```
+
+### 5. Use the Component in Your Page
+
+```jsx
+import FamilyTreeChart from '../components/FamilyTreeChart';
+
+export default function Home({ data, user, honoreeId }) {
+  return <FamilyTreeChart data={data} user={user} honoreeId={honoreeId} />;
+}
+```
+
+### 6. Enable Create-Tree Functionality
+
+To allow users to add/edit people, ensure you pass the correct `honoreeId` and `authContext` props, and that your API endpoints are set up as above. The chart will handle all data writes via the `/api/family/[honoreeId]/person` endpoint.
 
 ---
 
@@ -118,27 +192,6 @@ All data is now read and written via the `/api/family` endpoint, which connects 
 All example and demo code now fetches data from `/api/family` (GET for read, POST for create, PUT for update, DELETE for remove). See the example `index.js` files for usage patterns.
 
 **Note:** Local `.json` files are no longer used for runtime data. All data is persisted in MongoDB.
-
-
-## Examples
-
-### 1. WikiData Integration
-Explore our interactive family tree viewer that connects to the WikiData database, allowing you to visualize family relationships for millions of historical figures and notable people. Simply enter a WikiData ID to generate a complete family tree.
-
-[![WikiData Family Tree Example][product-wiki-tree-screenshot]](https://donatso.github.io/family-chart-doc/wiki-tree/?wiki_id=Q43274)
-
-Try it with:
-- [British Royal Family (Q43274)](https://donatso.github.io/family-chart-doc/wiki-tree/?wiki_id=Q43274)
-- [Albert Einstein (Q937)](https://donatso.github.io/family-chart-doc/wiki-tree/?wiki_id=Q937)
-- [Leonardo da Vinci (Q762)](https://donatso.github.io/family-chart-doc/wiki-tree/?wiki_id=Q762)
-
-### 2. Basic Implementation
-A simple example showing how to create a custom family tree from scratch. This demo features Aristotle's family tree with basic styling and interactions.
-
-[![Basic Family Tree Example][product-basic-tree-screenshot]](https://donatso.github.io/family-chart-doc/examples/1-basic-tree)
-
-
-
 
 
 <!-- CONTRIBUTING -->

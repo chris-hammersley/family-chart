@@ -9,18 +9,21 @@ import { kinshipInfo } from "./kinshipInfo.js"
 
 export default function(...args) { return new EditTree(...args) }
 
+
 function EditTree(cont, store, honoreeId, authContext) {
   this.cont = cont
   this.store = store
   this.honoreeId = honoreeId
   this.authContext = authContext
 
-  this.fields = [
+  // Default fields, can be overridden by setFields
+  this.defaultFields = [
     {type: 'text', label: 'first name', id: 'first name'},
     {type: 'text', label: 'last name', id: 'last name'},
     {type: 'text', label: 'birthday', id: 'birthday'},
     {type: 'text', label: 'avatar', id: 'avatar'}
-  ]
+  ];
+  this.fields = null;
 
   this.form_cont = null
 
@@ -114,7 +117,7 @@ EditTree.prototype.cardEditForm = function(datum) {
     store: this.store, 
     datum, 
     postSubmit: postSubmit.bind(this),
-    fields: this.fields, 
+    fields: this.fields || this.defaultFields,
     addRelative: null,
     onCancel: () => {},
     editFirst: this.editFirst,
@@ -238,27 +241,8 @@ EditTree.prototype.setEdit = function() {
 }
 
 EditTree.prototype.setFields = function(fields) {
-  const new_fields = []
-  if (!Array.isArray(fields)) {
-    console.error('fields must be an array')
-    return this
-  }
-  for (const field of fields) {
-    if (typeof field === 'string') {
-      new_fields.push({type: 'text', label: field, id: field})
-    } else if (typeof field === 'object') {
-      if (!field.id) {
-        console.error('fields must be an array of objects with id property')
-      } else {
-        new_fields.push(field)
-      }
-    } else {
-      console.error('fields must be an array of strings or objects')
-    }
-  }
-  this.fields = new_fields
-
-  return this
+  this.fields = fields;
+  return this;
 }
 
 EditTree.prototype.setOnChange = function(fn) {
@@ -272,7 +256,6 @@ EditTree.prototype.addRelative = function(datum) {
   this.addRelativeInstance.activate(datum)
 
   return this
-
 }
 
 EditTree.prototype.setupAddRelative = function() {

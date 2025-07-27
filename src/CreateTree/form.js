@@ -65,16 +65,25 @@ export function createForm({
   }
 
   fields.forEach(field => {
-    if (field.type === 'rel_reference') addRelReferenceField(field)
+    if (typeof field === 'string') {
+      // Handle string field names (backward compatibility)
+      form_creator.fields.push({
+        id: field,
+        type: 'text',
+        label: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1'),
+        initial_value: datum.data[field],
+      });
+    } else if (field.type === 'rel_reference') addRelReferenceField(field)
     else if (field.type === 'select') addSelectField(field)
-
-    else form_creator.fields.push({
-      id: field.id,
-      type: field.type,
-      label: field.label,
-      initial_value: datum.data[field.id],
-    })
-  })
+    else {
+      form_creator.fields.push({
+        id: field.id,
+        type: field.type,
+        label: field.label,
+        initial_value: datum.data[field.id],
+      });
+    }
+  });
 
   return form_creator
 

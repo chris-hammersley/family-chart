@@ -122,14 +122,16 @@ AddRelative.prototype.cleanUp = function(data) {
 }
 
 function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
+  // Use crypto.randomUUID for new person IDs
+  const getUUID = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
   if (!datum.rels.father) {
-    const father = createNewPerson({data: {gender: "M"}, rels: {children: [datum.id]}})
+    const father = createNewPerson({id: getUUID(), data: {gender: "M"}, rels: {children: [datum.id]}})
     father._new_rel_data = {rel_type: "father", label: addRelLabels.father, rel_id: datum.id}
     datum.rels.father = father.id
     store_data.push(father)
   }
   if (!datum.rels.mother) {
-    const mother = createNewPerson({data: {gender: "F"}, rels: {children: [datum.id]}})
+    const mother = createNewPerson({id: getUUID(), data: {gender: "F"}, rels: {children: [datum.id]}})
     mother._new_rel_data = {rel_type: "mother", label: addRelLabels.mother, rel_id: datum.id}
     datum.rels.mother = mother.id
     store_data.push(mother)
@@ -154,7 +156,7 @@ function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
     datum.rels.children.forEach(child_id => {
       const child = store_data.find(d => d.id === child_id)
       if (!child.rels.mother) {
-        if (!new_spouse) new_spouse = createNewPerson({data: {gender: "F"}, rels: {spouses: [datum.id], children: []}})
+        if (!new_spouse) new_spouse = createNewPerson({id: getUUID(), data: {gender: "F"}, rels: {spouses: [datum.id], children: []}})
         new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id}
         new_spouse.rels.children.push(child.id)
         datum.rels.spouses.push(new_spouse.id)
@@ -162,7 +164,7 @@ function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
         store_data.push(new_spouse)
       }
       if (!child.rels.father) {
-        if (!new_spouse) new_spouse = createNewPerson({data: {gender: "M"}, rels: {spouses: [datum.id], children: []}})
+        if (!new_spouse) new_spouse = createNewPerson({id: getUUID(), data: {gender: "M"}, rels: {spouses: [datum.id], children: []}})
         new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id}
         new_spouse.rels.children.push(child.id)
         datum.rels.spouses.push(new_spouse.id)
@@ -173,7 +175,7 @@ function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
   }
 
   const spouse_gender = datum.data.gender === "M" ? "F" : "M"
-  const new_spouse = createNewPerson({data: {gender: spouse_gender}, rels: {spouses: [datum.id]}})
+  const new_spouse = createNewPerson({id: getUUID(), data: {gender: spouse_gender}, rels: {spouses: [datum.id]}})
   new_spouse._new_rel_data = {rel_type: "spouse", label: addRelLabels.spouse, rel_id: datum.id}
   datum.rels.spouses.push(new_spouse.id)
   store_data.push(new_spouse)
@@ -185,13 +187,13 @@ function addDatumRelsPlaceholders(datum, store_data, addRelLabels) {
     const father_id = datum.data.gender === "F" ? spouse.id : datum.id
     if (!spouse.rels.children) spouse.rels.children = []
     
-    const new_son = createNewPerson({data: {gender: "M"}, rels: {father: father_id, mother: mother_id}})
+    const new_son = createNewPerson({id: getUUID(), data: {gender: "M"}, rels: {father: father_id, mother: mother_id}})
     new_son._new_rel_data = {rel_type: "son", label: addRelLabels.son, other_parent_id: spouse.id, rel_id: datum.id}
     spouse.rels.children.push(new_son.id)
     datum.rels.children.push(new_son.id)
     store_data.push(new_son)
 
-    const new_daughter = createNewPerson({data: {gender: "F"}, rels: {mother: mother_id, father: father_id}})
+    const new_daughter = createNewPerson({id: getUUID(), data: {gender: "F"}, rels: {mother: mother_id, father: father_id}})
     new_daughter._new_rel_data = {rel_type: "daughter", label: addRelLabels.daughter, other_parent_id: spouse.id, rel_id: datum.id}
     spouse.rels.children.push(new_daughter.id)
     datum.rels.children.push(new_daughter.id)
