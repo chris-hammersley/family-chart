@@ -1,17 +1,15 @@
 {
   "name": "family-chart",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "family tree creator and viewer",
   "keywords": [
-    "datafull",
     "family-chart",
-    "family tree",
-    "d3"
+    "family tree"
   ],
   "homepage": "https://donatso.github.io/family-chart/",
-  "license": "ISC",
+  "license": "MIT",
   "author": {
-    "name": "donatso"
+    "name": "chris-hammersley"
   },
   "main": "dist/family-chart.js",
   "unpkg": "dist/family-chart.min.js",
@@ -25,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/donatso/family-chart.git"
+    "url": "git+https://github.com/chris-hammersley/family-chart.git"
   },
   "files": [
     "dist/**/*.js",
